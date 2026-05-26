@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+
+    <!-- ═══════════════════════════════════════════════
+         TÍTULO
+    ═══════════════════════════════════════════════ -->
+    <mxCell id="title" value="Sistema de Inteligencia y Trazabilidad de Software (RAG)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;fontColor=#1F4E79;" vertex="1" parent="1">
+      <mxGeometry x="277" y="20" width="1100" height="40" as="geometry" />
+    </mxCell>
+    <mxCell id="subtitle" value="Arquitecto de Software Senior Virtual | Universidad Mariano Gálvez – IA 9no Ciclo" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#555555;" vertex="1" parent="1">
+      <mxGeometry x="277" y="58" width="1100" height="22" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════
+         ZONA 1 – FUENTES DE DATOS (izquierda)
+    ═══════════════════════════════════════════════ -->
+    <mxCell id="z1bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EBF3FB;strokeColor=#1F4E79;strokeWidth=2;dashed=0;verticalAlign=top;" vertex="1" parent="1">
+      <mxGeometry x="40" y="100" width="260" height="620" as="geometry" />
+    </mxCell>
+    <mxCell id="z1title" value="📂  FUENTES DE DATOS" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontStyle=1;fontSize=12;fontColor=#1F4E79;" vertex="1" parent="1">
+      <mxGeometry x="50" y="108" width="240" height="24" as="geometry" />
+    </mxCell>
+
+    <mxCell id="src_git" value="🗂️  Repositorios Git&#xa;(GitHub / GitLab / Local)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="65" y="148" width="210" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="src_drawio" value="🔷  Diagramas Draw.io&#xa;(.drawio / .xml)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="65" y="228" width="210" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="src_excel" value="📊  Diccionario de Datos&#xa;(Excel .xlsx / CSV / JSON)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="65" y="308" width="210" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="src_docs" value="📄  Documentación Técnica&#xa;(Markdown / PDF)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="65" y="388" width="210" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="src_infra" value="🐳  Infraestructura&#xa;(Dockerfile / docker-compose / K8s)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="65" y="468" width="210" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="src_mermaid" value="📐  Diagramas Mermaid&#xa;(Código como diagrama)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="65" y="548" width="210" height="60" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════
+         ZONA 2 – PIPELINE DE INGESTA (centro-izq)
+    ═══════════════════════════════════════════════ -->
+    <mxCell id="z2bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9E6;strokeColor=#D6A800;strokeWidth=2;" vertex="1" parent="1">
+      <mxGeometry x="340" y="100" width="270" height="620" as="geometry" />
+    </mxCell>
+    <mxCell id="z2title" value="⚙️  PIPELINE DE INGESTA" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontStyle=1;fontSize=12;fontColor=#D6A800;" vertex="1" parent="1">
+      <mxGeometry x="350" y="108" width="250" height="24" as="geometry" />
+    </mxCell>
+
+    <mxCell id="ing_load" value="📥  Cargadores&#xa;GitPython · openpyxl&#xa;lxml / BeautifulSoup · PyMuPDF" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="360" y="148" width="230" height="70" as="geometry" />
+    </mxCell>
+    <mxCell id="ing_clean" value="🧹  Limpieza y Normalización&#xa;Eliminación de ruido&#xa;Extracción de metadatos" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="360" y="238" width="230" height="70" as="geometry" />
+    </mxCell>
+    <mxCell id="ing_chunk" value="✂️  Chunking Estratégico&#xa;Semántico · Por función&#xa;Por tabla · Solapamiento" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="360" y="328" width="230" height="70" as="geometry" />
+    </mxCell>
+    <mxCell id="ing_meta" value="🏷️  Enriquecimiento de Metadatos&#xa;Fuente · Archivo · Línea&#xa;Tipo · Versión / Commit" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="360" y="418" width="230" height="70" as="geometry" />
+    </mxCell>
+    <mxCell id="ing_embed" value="🧠  Generación de Embeddings&#xa;OpenAI text-embedding-3&#xa;o modelo local (Ollama)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="360" y="508" width="230" height="70" as="geometry" />
+    </mxCell>
+    <mxCell id="ing_index" value="📌  Indexación&#xa;LangChain / LlamaIndex&#xa;Orquestación del pipeline" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="360" y="598" width="230" height="70" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════
+         ZONA 3 – BASE DE DATOS VECTORIAL (centro)
+    ═══════════════════════════════════════════════ -->
+    <mxCell id="z3bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E6FF;strokeColor=#7B2D8B;strokeWidth=2;" vertex="1" parent="1">
+      <mxGeometry x="650" y="100" width="240" height="340" as="geometry" />
+    </mxCell>
+    <mxCell id="z3title" value="🗄️  VECTOR STORE" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontStyle=1;fontSize=12;fontColor=#7B2D8B;" vertex="1" parent="1">
+      <mxGeometry x="660" y="108" width="220" height="24" as="geometry" />
+    </mxCell>
+
+    <mxCell id="vs_chroma" value="🟣  ChromaDB&#xa;(Local – desarrollo)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="670" y="148" width="200" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="vs_faiss" value="🔵  FAISS&#xa;(Local – alto rendimiento)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="670" y="228" width="200" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="vs_pinecone" value="☁️  Pinecone&#xa;(Cloud – plan gratuito)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="670" y="308" width="200" height="60" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════
+         ZONA 4 – MOTOR RAG (centro)
+    ═══════════════════════════════════════════════ -->
+    <mxCell id="z4bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE6E6;strokeColor=#C0392B;strokeWidth=2;" vertex="1" parent="1">
+      <mxGeometry x="650" y="470" width="240" height="250" as="geometry" />
+    </mxCell>
+    <mxCell id="z4title" value="🤖  MOTOR RAG" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontStyle=1;fontSize=12;fontColor=#C0392B;" vertex="1" parent="1">
+      <mxGeometry x="660" y="478" width="220" height="24" as="geometry" />
+    </mxCell>
+
+    <mxCell id="rag_retriever" value="🔍  Retriever&#xa;Búsqueda semántica vectorial&#xa;+ filtros por metadatos" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFD0D0;strokeColor=#C0392B;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="668" y="510" width="204" height="70" as="geometry" />
+    </mxCell>
+    <mxCell id="rag_rerank" value="📊  Re-ranking&#xa;Selección top-K chunks&#xa;más relevantes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFD0D0;strokeColor=#C0392B;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="668" y="595" width="204" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="rag_prompt" value="📝  Prompt Engineering&#xa;Context injection&#xa;Instrucciones de citación" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFD0D0;strokeColor=#C0392B;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="668" y="668" width="204" height="42" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════
+         ZONA 5 – LLM (derecha-superior)
+    ═══════════════════════════════════════════════ -->
+    <mxCell id="z5bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E6F9F0;strokeColor=#1A8A50;strokeWidth=2;" vertex="1" parent="1">
+      <mxGeometry x="930" y="100" width="240" height="310" as="geometry" />
+    </mxCell>
+    <mxCell id="z5title" value="🧠  LLM (Cerebro)" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontStyle=1;fontSize=12;fontColor=#1A8A50;" vertex="1" parent="1">
+      <mxGeometry x="940" y="108" width="220" height="24" as="geometry" />
+    </mxCell>
+
+    <mxCell id="llm_gpt" value="☁️  OpenAI GPT-4o&#xa;(Cloud – alta calidad)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8F0D8;strokeColor=#1A8A50;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="950" y="148" width="200" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="llm_claude" value="☁️  Anthropic Claude 3.5&#xa;(Cloud – análisis profundo)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8F0D8;strokeColor=#1A8A50;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="950" y="225" width="200" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="llm_ollama" value="💻  Ollama – Llama 3&#xa;(Local – sin costos)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8F0D8;strokeColor=#1A8A50;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="950" y="300" width="200" height="60" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════
+         ZONA 6 – INTERFAZ (derecha-inferior)
+    ═══════════════════════════════════════════════ -->
+    <mxCell id="z6bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E6F0FF;strokeColor=#2E4D9F;strokeWidth=2;" vertex="1" parent="1">
+      <mxGeometry x="930" y="440" width="240" height="280" as="geometry" />
+    </mxCell>
+    <mxCell id="z6title" value="💬  INTERFAZ DE USUARIO" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontStyle=1;fontSize=12;fontColor=#2E4D9F;" vertex="1" parent="1">
+      <mxGeometry x="940" y="448" width="220" height="24" as="geometry" />
+    </mxCell>
+
+    <mxCell id="ui_streamlit" value="🖥️  Streamlit / Gradio&#xa;Chat UI principal" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8D8FF;strokeColor=#2E4D9F;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="950" y="485" width="200" height="55" as="geometry" />
+    </mxCell>
+    <mxCell id="ui_memory" value="🧩  Memoria de Contexto&#xa;Historial de conversación&#xa;ConversationBufferMemory" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8D8FF;strokeColor=#2E4D9F;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="950" y="555" width="200" height="65" as="geometry" />
+    </mxCell>
+    <mxCell id="ui_voice" value="🎙️  Voz (BONUS)&#xa;STT: Whisper&#xa;TTS: gTTS / pyttsx3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8D8FF;strokeColor=#2E4D9F;fontSize=11;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="950" y="635" width="200" height="65" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════
+         ZONA 7 – SEGURIDAD (abajo centro)
+    ═══════════════════════════════════════════════ -->
+    <mxCell id="z7bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#666666;strokeWidth=1;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="340" y="740" width="580" height="70" as="geometry" />
+    </mxCell>
+    <mxCell id="z7title" value="🔒  SEGURIDAD  –  .env  |  API Keys  |  Aislamiento de conocimiento  |  Sin acceso a BD activas" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontStyle=2;fontSize=11;fontColor=#555555;" vertex="1" parent="1">
+      <mxGeometry x="350" y="755" width="560" height="40" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════
+         FLECHAS – FUENTES → INGESTA
+    ═══════════════════════════════════════════════ -->
+    <mxCell id="a1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#82B366;strokeWidth=2;" edge="1" parent="1" source="src_git"    target="ing_load"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="a2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82B366;strokeWidth=2;" edge="1" parent="1" source="src_drawio"   target="ing_load"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="a3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82B366;strokeWidth=2;" edge="1" parent="1" source="src_excel"    target="ing_load"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="a4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82B366;strokeWidth=2;" edge="1" parent="1" source="src_docs"     target="ing_load"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="a5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82B366;strokeWidth=2;" edge="1" parent="1" source="src_infra"    target="ing_load"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="a6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82B366;strokeWidth=2;" edge="1" parent="1" source="src_mermaid"  target="ing_load"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+    <!-- FLECHAS – PIPELINE INTERNO -->
+    <mxCell id="b1" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#D6A800;strokeWidth=2;" edge="1" parent="1" source="ing_load"  target="ing_clean"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="b2" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#D6A800;strokeWidth=2;" edge="1" parent="1" source="ing_clean" target="ing_chunk"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="b3" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#D6A800;strokeWidth=2;" edge="1" parent="1" source="ing_chunk" target="ing_meta"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="b4" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#D6A800;strokeWidth=2;" edge="1" parent="1" source="ing_meta"  target="ing_embed"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="b5" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#D6A800;strokeWidth=2;" edge="1" parent="1" source="ing_embed" target="ing_index"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+    <!-- FLECHAS – INGESTA → VECTOR STORE -->
+    <mxCell id="c1" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#7B2D8B;strokeWidth=2;" edge="1" parent="1" source="ing_embed" target="vs_chroma">  <mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="c2" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#7B2D8B;strokeWidth=2;" edge="1" parent="1" source="ing_embed" target="vs_faiss">   <mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="c3" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#7B2D8B;strokeWidth=2;" edge="1" parent="1" source="ing_embed" target="vs_pinecone"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+    <!-- FLECHAS – VECTOR STORE ↔ RAG -->
+    <mxCell id="d1" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#C0392B;strokeWidth=2;" edge="1" parent="1" source="vs_chroma"   target="rag_retriever"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="d2" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#C0392B;strokeWidth=2;" edge="1" parent="1" source="vs_faiss"    target="rag_retriever"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="d3" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#C0392B;strokeWidth=2;" edge="1" parent="1" source="vs_pinecone" target="rag_retriever"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+    <!-- FLECHAS – RAG INTERNO -->
+    <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#C0392B;strokeWidth=2;" edge="1" parent="1" source="rag_retriever" target="rag_rerank"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#C0392B;strokeWidth=2;" edge="1" parent="1" source="rag_rerank"    target="rag_prompt"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+    <!-- FLECHAS – RAG → LLM -->
+    <mxCell id="f1" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#1A8A50;strokeWidth=2;" edge="1" parent="1" source="rag_prompt" target="llm_gpt">   <mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="f2" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#1A8A50;strokeWidth=2;" edge="1" parent="1" source="rag_prompt" target="llm_claude"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="f3" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#1A8A50;strokeWidth=2;" edge="1" parent="1" source="rag_prompt" target="llm_ollama"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+    <!-- FLECHAS – LLM → UI -->
+    <mxCell id="g1" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E4D9F;strokeWidth=2;" edge="1" parent="1" source="llm_gpt"    target="ui_streamlit"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="g2" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E4D9F;strokeWidth=2;" edge="1" parent="1" source="llm_claude" target="ui_streamlit"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="g3" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E4D9F;strokeWidth=2;" edge="1" parent="1" source="llm_ollama" target="ui_streamlit"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+    <!-- FLECHA – UI → RAG (memoria / feedback loop) -->
+    <mxCell id="h1" value="Consulta + Historial" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E4D9F;strokeWidth=1;dashed=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="ui_memory" target="rag_retriever">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="920" y="587" />
+          <mxPoint x="920" y="545" />
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+  </root>
+</mxGraphModel>

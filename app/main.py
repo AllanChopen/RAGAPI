@@ -1,3 +1,12 @@
+import os
+import sys
+
+# Allow running this module as a script (python app/main.py) by adding
+# the project root to sys.path when executed directly. This makes
+# `from app...` imports work even if Python's sys.path[0] is the `app/` dir.
+if __name__ == "__main__" and __package__ is None:
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from contextlib import asynccontextmanager
 import logging
 
@@ -13,6 +22,7 @@ from app.controllers.item_controller import router as item_router
 from app.controllers.rag_controller import router as rag_router
 from app.controllers.trace_controller import router as trace_router
 from app.controllers.vector_controller import router as vector_router
+from app.controllers.frontend_controller import router as frontend_router
 from app.core.database import Base, engine
 from app.core.settings import settings
 import app.models
@@ -51,5 +61,18 @@ def create_app() -> FastAPI:
     app.include_router(rag_router, prefix=settings.api_prefix)
     app.include_router(chat_router, prefix=settings.api_prefix)
     app.include_router(trace_router, prefix=settings.api_prefix)
+    app.include_router(frontend_router, prefix="")
 
     return app
+
+
+if __name__ == "__main__":
+    # Run the app with uvicorn when executed directly for convenience.
+    # Uses the factory callable `create_app` so startup lifespan runs.
+    try:
+        import uvicorn
+
+        uvicorn.run("app.main:create_app", factory=True, host="127.0.0.1", port=8000)
+    except Exception:
+        # If uvicorn isn't available, print a helpful message.
+        print("Run the server with: python -m uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000")

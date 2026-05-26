@@ -73,10 +73,39 @@ class VectorService:
             ContextChunk.embedding.cosine_distance(query_embedding).label("distance"),
         )
 
+        # payload.source may be None, a single string, or a list of strings
+        rows = []
         if payload.source:
-            stmt = stmt.filter(ContextChunk.source == payload.source)
+            # normalize comma-separated into list
+            sources_list = payload.source if isinstance(payload.source, list) else (
+                [p.strip() for p in payload.source.split(",") if p.strip()] if isinstance(payload.source, str) and "," in payload.source else [payload.source]
+            )
 
-        rows = stmt.order_by("distance").limit(payload.top_k).all()
+            # if uploaded sources present, perform a two-stage search to prioritize them
+            uploaded_sources = [s for s in sources_list if isinstance(s, str) and s.startswith("uploaded:")]
+            other_sources = [s for s in sources_list if s not in uploaded_sources]
+
+            if uploaded_sources:
+                stmt_uploaded = stmt.filter(ContextChunk.source.in_(uploaded_sources))
+                rows_uploaded = stmt_uploaded.order_by("distance").limit(payload.top_k).all()
+                rows.extend(rows_uploaded)
+
+                if len(rows) < payload.top_k and other_sources:
+                    stmt_other = stmt.filter(ContextChunk.source.in_(other_sources))
+                    rows_other = stmt_other.order_by("distance").limit(payload.top_k).all()
+                    # combine, avoiding duplicate ids
+                    existing_ids = {r.id for r in rows}
+                    for r in rows_other:
+                        if r.id not in existing_ids:
+                            rows.append(r)
+                            existing_ids.add(r.id)
+                            if len(rows) >= payload.top_k:
+                                break
+            else:
+                stmt = stmt.filter(ContextChunk.source.in_(sources_list))
+                rows = stmt.order_by("distance").limit(payload.top_k).all()
+        else:
+            rows = stmt.order_by("distance").limit(payload.top_k).all()
 
         matches: list[VectorSearchResult] = []
         for row in rows:

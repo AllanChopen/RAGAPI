@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from typing import List
 
 
 class VectorHealthResponse(BaseModel):
@@ -23,7 +24,8 @@ class VectorUpsertResponse(BaseModel):
 class VectorSearchRequest(BaseModel):
     query: str
     top_k: int = Field(default=5, ge=1, le=50)
-    source: str | None = None
+    # source can be a single source string, a list of source strings, or None (search all)
+    source: str | List[str] | None = None
 
 
 class VectorSearchResult(BaseModel):

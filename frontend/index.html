@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>RAG Upload Tester</title>
+    <style>
+      body{font-family:Arial,Helvetica,sans-serif;max-width:900px;margin:24px auto;padding:12px}
+      .row{margin-bottom:12px}
+      label{display:block;margin-bottom:6px}
+      textarea{width:100%;height:120px}
+      pre{background:#f6f6f6;padding:12px;border-radius:6px}
+    </style>
+  </head>
+  <body>
+    <h1>RAG Chat</h1>
+
+    <div id="chat" style="border:1px solid #ddd;padding:12px;height:60vh;overflow:auto;background:#fff;border-radius:8px"></div>
+
+    <div id="composer" style="display:flex;gap:8px;margin-top:12px;align-items:flex-end">
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+        <input id="message" type="text" placeholder="Escribe tu pregunta aquí..." style="width:100%;padding:10px;border:1px solid #ccc;border-radius:6px" />
+        <input id="repo_url" type="text" placeholder="Pega la URL del repo (opcional)" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px" />
+        <div style="display:flex;gap:8px;align-items:center">
+          <!-- Sources, top_k and temperature are hardcoded in the app; hide controls from end user -->
+          <input id="files" type="file" multiple style="margin-left:8px" />
+          <label style="margin:0 0 0 8px;font-size:12px"><input type="checkbox" id="debug_flag" /> Debug</label>
+          <button id="ingest" style="margin-left:8px;padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:#f3f4f6;cursor:pointer">Ingestar</button>
+          <button id="reset_session" style="margin-left:8px;padding:6px 10px;border-radius:6px;border:1px solid #f87171;background:#fee2e2;color:#7f1d1d;cursor:pointer">Reset session</button>
+        </div>
+      </div>
+      <div style="width:140px;display:flex;flex-direction:column;gap:8px">
+        <!-- Hardcoded: Top K = 10, Temperature = 0.2; user cannot change -->
+        <button id="send" style="padding:10px;background:#2563eb;color:#fff;border-radius:6px;border:0;cursor:pointer">Enviar</button>
+      </div>
+    </div>
+
+    <div style="margin-top:12px">
+      <h3 style="margin:0 0 6px 0">Última respuesta / debug</h3>
+      <pre id="result" style="white-space:pre-wrap;word-break:break-word;padding:12px;border-radius:6px;background:#f6f6f6;min-height:40px">Sin ejecutar</pre>
+    </div>
+
+    <script>
+      const chatEl = document.getElementById('chat');
+      const resultEl = document.getElementById('result');
+
+      function addMessage(role, text){
+        const el = document.createElement('div');
+        el.style.marginBottom='10px';
+        el.innerHTML = `<div style="font-size:13px"><strong>${role}:</strong></div><div style="margin-top:4px">${text}</div>`;
+        chatEl.appendChild(el);
+        chatEl.scrollTop = chatEl.scrollHeight;
+      }
+
+      async function sendAsk(){
+        const files = document.getElementById('files').files;
+        const repoUrl = document.getElementById('repo_url').value.trim();
+        const form = new FormData();
+        const query = document.getElementById('message').value.trim();
+        if(!query) return;
+        form.append('query', query);
+        // Hardcoded parameters: top_k and temperature are fixed for end users
+        form.append('top_k', '10');
+        form.append('max_new_tokens', '300');
+        form.append('temperature', '0.2');
+
+        // Sources are hardcoded: prefer uploaded, then repo, then API
+        const sources = ['uploaded','repo','api'];
+
+        if(repoUrl){
+          // include repo URL in form and ensure repo is selected
+          form.append('repo_url', repoUrl);
+          if(!sources.includes('repo')) sources.push('repo');
+        }
+
+        // append debug flag
+        if(document.getElementById('debug_flag').checked) form.append('debug','true');
+
+        // Always combine sources in the backend; still include explicit sources token
+        form.append('combine_sources', 'true');
+        form.append('sources', sources.join(','));
+
+        for (let i=0;i<files.length;i++) form.append('files', files[i]);
+
+        addMessage('User', query);
+        resultEl.textContent = 'Enviando...';
+
+        try{
+            // If an uploaded source was previously created via ingest, substitute it
+            if(sources.includes('uploaded') && window.lastUploadedSource){
+              // replace 'uploaded' token with the exact persisted source name
+              const idx = sources.indexOf('uploaded');
+              if(idx!==-1) sources[idx] = window.lastUploadedSource;
+              form.set('sources', sources.join(','));
+            }
+
+            const resp = await fetch('/api/rag/ask/upload', {method:'POST', body: form});
+          const json = await resp.json();
+          const answer = json.answer || JSON.stringify(json, null, 2);
+          addMessage('Assistant', answer.replace(/\n/g,'<br/>'));
+          // show citations and raw for debugging
+          resultEl.textContent = JSON.stringify({answer: json.answer, citations: json.citations, context_chunks_used: json.context_chunks_used, retrieval_query: json.retrieval_query}, null, 2);
+        }catch(e){
+          resultEl.textContent = 'Error: '+e;
+          addMessage('System', 'Error: '+e);
+        }
+      }
+
+      document.getElementById('send').addEventListener('click', sendAsk);
+      document.getElementById('message').addEventListener('keydown', (e)=>{ if(e.key==='Enter') sendAsk(); });
+
+      document.getElementById('ingest').addEventListener('click', async function(){
+        const files = document.getElementById('files').files;
+        const repoUrl = document.getElementById('repo_url').value.trim();
+        if(!repoUrl && files.length===0){ alert('Proporciona repo o archivos para ingestar'); return; }
+        const form = new FormData();
+        if(repoUrl) form.append('repo_url', repoUrl);
+        for (let i=0;i<files.length;i++) form.append('files', files[i]);
+        form.append('keep_uploaded','true');
+        resultEl.textContent = 'Ingestando...';
+        try{
+          const resp = await fetch('/api/rag/ingest', {method:'POST', body: form});
+          const json = await resp.json();
+          if(json.ok){
+            resultEl.textContent = JSON.stringify(json, null, 2);
+            if(json.uploaded_source){ window.lastUploadedSource = json.uploaded_source; }
+            addMessage('System', 'Ingesta completada');
+          }else{
+            resultEl.textContent = JSON.stringify(json, null, 2);
+          }
+        }catch(e){ resultEl.textContent = 'Error: '+e; addMessage('System','Error: '+e); }
+      });
+      document.getElementById('reset_session').addEventListener('click', async function(){
+        if(!confirm('Borrar todos los chunks subidos y reiniciar sesión?')) return;
+        resultEl.textContent = 'Reseteando...';
+        try{
+          const resp = await fetch('/api/rag/reset_session', {method:'POST'});
+          const json = await resp.json();
+          if(json.ok){
+            window.lastUploadedSource = null;
+            resultEl.textContent = JSON.stringify(json, null, 2);
+            addMessage('System', `Reset: deleted ${json.deleted_uploaded_chunks} uploaded chunks`);
+          } else {
+            resultEl.textContent = JSON.stringify(json, null, 2);
+          }
+        }catch(e){ resultEl.textContent = 'Error: '+e; addMessage('System','Error: '+e); }
+      });
+    </script>
+  </body>
+</html>
