@@ -1,210 +1,409 @@
-# RAG FastAPI
+## Manual de instalación y ejecución local
 
-This project uses `RAGAPI.py` as the FastAPI entrypoint, similar to a `.NET` `Program.cs` file.
+Este proyecto es una API RAG desarrollada con **FastAPI**, orientada a centralizar conocimiento técnico desde repositorios de código, documentos, diagramas Draw.io, archivos Excel, Markdown, PDF y otros artefactos técnicos.
+La aplicación incluye una interfaz web tipo chat para cargar fuentes de información y realizar preguntas usando recuperación aumentada por generación.
 
-## Structure
+---
 
-- `RAGAPI.py`: application bootstrap
-- `app/controllers`: request handlers
-- `app/models`: SQLAlchemy models
-- `app/services`: business logic
-- `app/views`: response shaping
-- `app/schemas`: request and response contracts
-- `app/core`: settings and database session setup
+## 1. Requisitos previos
 
-## Run locally
+Antes de ejecutar el proyecto, asegúrate de tener instalado:
 
-1. Update `.env` with either `DATABASE_URL` (recommended, e.g. Supabase PostgreSQL) or the MySQL fallback values.
-2. Set `HF_API_TOKEN` and optionally `HF_MODEL_URL` for Hugging Face inference tests.
-3. Install dependencies from `requirements.txt`.
-4. Start the API with `uvicorn RAGAPI:app --reload`.
-5. Open `/docs` for Swagger UI.
+* Python 3.10 o superior.
+* Git.
+* PostgreSQL con extensión `pgvector`, o una base de datos Supabase PostgreSQL.
+* Una API Key de Hugging Face.
+* Navegador web actualizado.
 
-## Hugging Face test endpoint
+También se recomienda usar un entorno virtual de Python para evitar conflictos con dependencias globales.
 
-- Method: `POST`
-- Path: `/api/hf/test`
+---
 
-Example request body:
+## 2. Clonar o descargar el proyecto
 
-```json
-{
-	"prompt": "Explain what RAG is in one sentence.",
-	"max_new_tokens": 120,
-	"temperature": 0.2
-}
+Clona el repositorio o descarga el código fuente en tu equipo.
+
+```bash
+git clone https://github.com/AllanChopen/RAGAPI
+cd RAGAPI
 ```
 
-## Git source endpoint (local or remote)
+Si el proyecto fue entregado como archivo `.zip`, descomprímelo y entra a la carpeta raíz del proyecto:
 
-- Method: `POST`
-- Path: `/api/git/scan`
-
-Local repository example:
-
-```json
-{
-	"local_path": "C:/Users/allan/Documents/Python/RAG",
-	"max_files": 100,
-	"include_extensions": [".py", ".md", ".xml"]
-}
+```bash
+cd RAGAPI
 ```
 
-Note: local_path must be an initialized Git repository directory.
+La raíz del proyecto debe contener archivos como:
 
-## Vector storage endpoint (Supabase pgvector)
-
-- Method: `GET`
-- Path: `/api/vector/health`
-- Purpose: verify `vector` extension and `context_chunks` table availability.
-
-- Method: `POST`
-- Path: `/api/vector/test-upsert`
-- Purpose: insert a test chunk with embedding.
-
-Example request body (`embedding` must match `EMBEDDING_DIMENSIONS`, default 1536):
-
-```json
-{
-	"source": "manual-test",
-	"content": "Sample context chunk",
-	"embedding": [0.0, 0.0, 0.0],
-	"metadata_json": {
-		"type": "test"
-	}
-}
+```text
+RAGAPI.py
+requirements.txt
+.env.example
+app/
+frontend/
+TestFiles/
+README.md
 ```
 
-For the example above, set `EMBEDDING_DIMENSIONS=3` in `.env` before calling `/api/vector/test-upsert`.
+---
 
-- Method: `POST`
-- Path: `/api/vector/search`
-- Purpose: retrieve top-k semantically similar chunks from `context_chunks`.
+## 3. Crear entorno virtual
 
-Example request body:
+En Windows:
 
-```json
-{
-	"query": "how flask handles request context",
-	"top_k": 5,
-	"source": "flask"
-}
+```bash
+python -m venv venv
+venv\Scripts\activate
 ```
 
-Remote repository example (GitHub/GitLab):
+En macOS o Linux:
 
-```json
-{
-	"repo_url": "https://github.com/owner/repo.git",
-	"branch": "main",
-	"max_files": 100,
-	"include_extensions": [".py", ".ts", ".md"]
-}
+```bash
+python3 -m venv venv
+source venv/bin/activate
 ```
 
-## Git ingest endpoint (scan + vector store)
+Cuando el entorno virtual esté activo, deberías ver algo parecido a esto en la terminal:
 
-- Method: `POST`
-- Path: `/api/git/ingest`
-- Purpose: clone/open repository, chunk file content, generate embeddings, and store chunks in `context_chunks`.
-
-Example request body:
-
-```json
-{
-	"repo_url": "https://github.com/octocat/Hello-World.git",
-	"branch": "master",
-	"max_files": 50,
-	"include_extensions": [".md", ".py", ".ts"],
-	"chunk_size": 1200,
-	"chunk_overlap": 150,
-	"max_chunks_per_file": 20
-}
+```text
+(venv)
 ```
 
-## RAG question endpoint (retrieval + generation)
+---
 
-- Method: `POST`
-- Path: `/api/rag/ask`
-- Purpose: retrieve top-k chunks from `context_chunks` and generate an answer with Hugging Face.
+## 4. Instalar dependencias
 
-Example request body:
+Instala las dependencias del proyecto usando:
 
-```json
-{
-	"query": "How does Flask manage request context?",
-	"source": "flask",
-	"top_k": 5,
-	"max_new_tokens": 300,
-	"temperature": 0.2
-}
+```bash
+pip install -r requirements.txt
 ```
 
-## RAG streaming endpoint (SSE)
+El archivo `requirements.txt` incluye las librerías necesarias para:
 
-- Method: `POST`
-- Path: `/api/rag/ask/stream`
-- Purpose: same retrieval flow as `/api/rag/ask`, but emits streaming events (`meta`, `token`, `done`).
+* FastAPI.
+* Uvicorn.
+* SQLAlchemy.
+* PostgreSQL.
+* pgvector.
+* Procesamiento de Excel.
+* Procesamiento de PDF.
+* Lectura de XML / Draw.io.
+* Clonación de repositorios Git.
+* Integración con Hugging Face.
 
-Example request body:
+---
 
-```json
-{
-	"query": "How does Flask manage request context?",
-	"source": "flask",
-	"top_k": 5,
-	"max_new_tokens": 300,
-	"temperature": 0.2
-}
+## 5. Configurar variables de entorno
+
+Copia el archivo `.env.example` y crea un archivo `.env` en la raíz del proyecto.
+
+En Windows:
+
+```bash
+copy .env.example .env
 ```
 
-## Simple user loop (no manual JSON)
+En macOS o Linux:
 
-- UI: `GET /api/chat`
-- Step 1: connect repo using `POST /api/chat/setup?repo_url=...&branch=...`
-- Step 2: ask questions using `POST /api/chat/ask?chat_id=...&query=...`
-- Step 3 (optional): ingest dictionary using `POST /api/chat/dictionary/ingest?file_path=...&dictionary_name=...`
-- Step 4 (optional): trace field usage using `POST /api/chat/trace-field?field_name=...&dictionary_name=...`
-
-This flow is designed so users only paste a repository once and then ask natural-language questions.
-
-Supported artifact ingestion in `/api/chat/setup` and `/api/git/ingest`:
-
-- Architecture: `.drawio`, Draw.io `.xml`, Mermaid `.mmd/.mermaid`
-- Data dictionaries: `.xlsx`, `.csv`, `.json`
-- Technical documentation: `.md`, `.pdf`
-- Infrastructure: `Dockerfile`, `docker-compose.yml/.yaml`, Kubernetes manifests `.yaml/.yml`
-
-## Cross traceability (Data Dictionary -> Code)
-
-- Ingest data dictionary (Excel): `POST /api/trace/dictionary/ingest`
-- Trace field usage in code: `POST /api/trace/field-usage`
-
-Dictionary ingest body:
-
-```json
-{
-	"file_path": "C:/path/to/dictionary.xlsx",
-	"dictionary_name": "DiccionarioClientes",
-	"sheet_name": "Campos"
-}
+```bash
+cp .env.example .env
 ```
 
-Field usage body:
+Luego abre el archivo `.env` y configura tus valores reales.
 
-```json
-{
-	"field_name": "customer_id",
-	"dictionary_name": "DiccionarioClientes",
-	"top_k": 20
-}
+Ejemplo:
+
+```env
+APP_NAME=RAG API
+API_PREFIX=/api
+
+DATABASE_URL=postgresql://USUARIO:CONTRASENA@HOST:PUERTO/postgres
+
+HF_API_TOKEN=hf_tu_token_de_huggingface
+HF_MODEL_URL=https://router.huggingface.co/v1/chat/completions
+HF_MODEL_NAME=Qwen/Qwen2.5-Coder-32B-Instruct
+
+EMBEDDING_DIMENSIONS=1536
 ```
 
-Each trace match includes explicit source citation: file path + line range.
+---
 
-## Reliability Rules
+## 6. Configurar base de datos PostgreSQL / Supabase
 
-- Citation of sources: RAG answers now append a `Fuentes` section with file line ranges and tab when available.
-- Context memory: `/api/chat/ask` keeps session turn history and injects recent turns into retrieval generation.
-- Knowledge isolation: RAG prompt is strict and only uses loaded context; when evidence is missing, it returns:
-  `No hay evidencia suficiente en los documentos cargados.`
+El proyecto utiliza una tabla llamada `context_chunks` para guardar fragmentos de información, metadatos y embeddings.
+
+Se recomienda usar PostgreSQL con la extensión `pgvector`.
+
+Si usas Supabase:
+
+1. Crea un proyecto en Supabase.
+2. Copia la cadena de conexión PostgreSQL.
+3. Colócala en la variable `DATABASE_URL` del archivo `.env`.
+4. Verifica que la extensión `vector` esté disponible.
+
+El proyecto intenta crear la extensión automáticamente al iniciar:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+Si tu usuario de base de datos no tiene permisos para crear extensiones, habilita `vector` manualmente desde Supabase o desde tu administrador de base de datos.
+
+---
+
+## 7. Ejecutar el servidor
+
+Desde la raíz del proyecto, ejecuta:
+
+```bash
+uvicorn RAGAPI:app --reload
+```
+
+Si todo está correcto, deberías ver una salida similar a:
+
+```text
+Uvicorn running on http://127.0.0.1:8000
+```
+
+---
+
+## 8. Abrir la interfaz web
+
+Abre el navegador y entra a:
+
+```text
+http://127.0.0.1:8000/
+```
+
+Desde esta interfaz puedes:
+
+* Ingresar un enlace de repositorio Git.
+* Cargar archivos como Excel, Draw.io, PDF, Markdown, CSV, JSON o XML.
+* Ingestar las fuentes cargadas.
+* Realizar preguntas en formato chat.
+* Ver fuentes utilizadas por la respuesta.
+* Consultar trazabilidad entre documentación, código y diccionarios de datos.
+
+---
+
+## 9. Abrir Swagger UI
+
+La documentación interactiva de la API está disponible en:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+Desde Swagger puedes probar endpoints como:
+
+* `POST /api/rag/ingest`
+* `POST /api/rag/ask/upload`
+* `POST /api/rag/ask`
+* `POST /api/git/ingest`
+* `POST /api/vector/search`
+* `POST /api/trace/dictionary/ingest`
+* `POST /api/trace/field-usage`
+
+---
+
+## 10. Flujo recomendado de uso desde la interfaz
+
+### Paso 1: cargar conocimiento
+
+Primero debes proporcionar información al sistema. Puedes usar una o varias fuentes:
+
+* URL de un repositorio GitHub o GitLab.
+* Archivo `.drawio` o `.xml` con arquitectura.
+* Archivo `.xlsx` con diccionario de datos.
+* Documentación `.md` o `.pdf`.
+* Archivos `.csv`, `.json`, `.yaml`, `.yml`, `Dockerfile`, entre otros.
+
+### Paso 2: ingestar fuentes
+
+Después de seleccionar las fuentes, presiona el botón para ingestar información.
+El sistema procesará los documentos y guardará fragmentos consultables en la base vectorial.
+
+### Paso 3: hacer preguntas
+
+Cuando existan fuentes cargadas, puedes realizar preguntas como:
+
+```text
+¿Qué hace este repositorio?
+```
+
+```text
+Explícame la arquitectura del sistema.
+```
+
+```text
+¿En qué archivos se usa el campo customer_id definido en el diccionario de datos?
+```
+
+```text
+¿Qué impacto tendría cambiar esta función?
+```
+
+---
+
+## 11. Archivos de prueba incluidos
+
+El proyecto incluye una carpeta llamada:
+
+```text
+TestFiles/
+```
+
+Dentro de esta carpeta pueden existir archivos de prueba como:
+
+```text
+diccionario_datos.xlsx
+diccionario_datos_APIBanca.xlsx
+arquitectura_rag.drawio
+arquitectura_APIBanca.drawio
+```
+
+Estos archivos sirven para validar la ingesta de:
+
+* Diccionarios de datos en Excel.
+* Diagramas de arquitectura en Draw.io.
+* Relaciones entre documentación técnica y código fuente.
+
+---
+
+## 12. Ejemplo de prueba rápida
+
+Ejecuta el servidor:
+
+```bash
+uvicorn RAGAPI:app --reload
+```
+
+Abre:
+
+```text
+http://127.0.0.1:8000/
+```
+
+Carga una fuente, por ejemplo:
+
+* Un repositorio Git.
+* Un archivo Excel desde `TestFiles/`.
+* Un archivo Draw.io desde `TestFiles/`.
+
+Luego pregunta:
+
+```text
+¿Qué información contienen las fuentes cargadas?
+```
+
+Otra pregunta recomendada:
+
+```text
+Explícame la arquitectura del sistema según el diagrama cargado.
+```
+
+Y para validar trazabilidad:
+
+```text
+¿En qué archivos de código se usa el campo definido en el diccionario de datos?
+```
+
+---
+
+## 13. Reiniciar la sesión de carga
+
+La interfaz incluye una opción para reiniciar la sesión actual.
+Esto permite limpiar fuentes temporales cargadas y comenzar una nueva prueba sin mezclar contexto anterior.
+
+También puedes usar el endpoint:
+
+```text
+POST /api/rag/reset_session
+```
+
+---
+
+## 14. Consideraciones importantes
+
+* El modelo responde priorizando únicamente las fuentes cargadas.
+* Si no existe evidencia suficiente en los documentos cargados, el sistema debe responder:
+
+```text
+No hay evidencia suficiente en los documentos cargados.
+```
+
+* Las respuestas deben incluir fuentes o referencias cuando exista información recuperada.
+* Para mejores resultados, carga documentos relacionados entre sí, por ejemplo:
+
+  * Repositorio de código.
+  * Diagrama de arquitectura.
+  * Diccionario de datos.
+  * Documentación técnica.
+
+---
+
+## 15. Problemas comunes
+
+### Error de conexión a base de datos
+
+Verifica que `DATABASE_URL` esté correctamente configurado en `.env`.
+
+También confirma que la base de datos esté activa y acepte conexiones externas.
+
+---
+
+### Error relacionado con `vector`
+
+Si aparece un error relacionado con `vector`, `pgvector` o la extensión `vector`, habilita la extensión en PostgreSQL:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+---
+
+### Error de Hugging Face
+
+Si el modelo no responde, revisa:
+
+* Que `HF_API_TOKEN` sea válido.
+* Que `HF_MODEL_URL` esté configurado.
+* Que `HF_MODEL_NAME` exista y esté disponible.
+* Que tengas conexión a internet.
+
+---
+
+### La IA responde que no hay evidencia suficiente
+
+Esto puede ocurrir cuando:
+
+* No se han cargado fuentes.
+* La pregunta no está relacionada con los documentos cargados.
+* El documento cargado no contiene información suficiente.
+* La fuente no fue correctamente ingestada.
+
+Para corregirlo, carga al menos una fuente válida y vuelve a realizar la pregunta.
+
+---
+
+## 16. Comando principal de ejecución
+
+El comando principal recomendado para levantar el proyecto en local es:
+
+```bash
+uvicorn RAGAPI:app --reload
+```
+
+URL principal:
+
+```text
+http://127.0.0.1:8000/
+```
+
+Swagger UI:
+
+```text
+http://127.0.0.1:8000/docs
+```
