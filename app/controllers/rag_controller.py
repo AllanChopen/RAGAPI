@@ -153,7 +153,6 @@ def ask_rag(payload: RAGAskRequest, db: Session = Depends(get_db)) -> RAGAskResp
         try:
             payload.top_k = 10
             payload.temperature = 0.2
-            payload.source = None
         except Exception:
             pass
         return RAGService.ask(db, payload)
@@ -243,11 +242,25 @@ def ask_with_uploads(
     tmp_source = f"uploaded:{session_id}"
 
     try:
-        # parse conversation history if provided
+        # Importante:
+        # El frontend puede guardar campos extra como citations para mostrarlos en pantalla,
+        # pero el prompt solo necesita user y assistant.
         history = []
         if conversation_history:
             try:
-                history = _json.loads(conversation_history)
+                raw_history = _json.loads(conversation_history)
+
+                if isinstance(raw_history, list):
+                    for turn in raw_history[-6:]:
+                        if not isinstance(turn, dict):
+                            continue
+
+                        history.append(
+                            {
+                                "user": str(turn.get("user", "")),
+                                "assistant": str(turn.get("assistant", "")),
+                            }
+                        )
             except Exception:
                 history = []
 
@@ -361,56 +374,86 @@ def ask_with_uploads(
             db.commit()
 
         # decide which sources to search
-        selected_source = None
-        if combine_sources:
-            selected_source = None
-        elif sources:
+                # decide which sources to search
+        # Regla:
+        # - Si hay solo repo, consulta solo ese repo.
+        # - Si hay solo archivos, consulta solo esos archivos.
+        # - Si hay repo + archivos, consulta ambos.
+        # - Si el frontend manda sources, se respetan esas fuentes.
+        selected_sources: list[str] = []
+        repo_name_from_request: Optional[str] = None
+
+        def add_selected(value: Optional[str]) -> None:
+            if not value:
+                return
+            if value not in selected_sources:
+                selected_sources.append(value)
+
+        def ensure_repo_ingested() -> Optional[str]:
+            nonlocal repo_name_from_request
+
+            if repo_name_from_request:
+                return repo_name_from_request
+
+            if not repo_url:
+                return None
+
+            try:
+                from app.schemas.git_schema import GitIngestRequest
+                from app.services.git_service import GitService
+
+                ingest_payload = GitIngestRequest(repo_url=repo_url)
+                ingest_resp = GitService.ingest_repository(ingest_payload, db)
+                repo_name_from_request = ingest_resp.repo_name
+                return repo_name_from_request
+            except Exception:
+                return None
+
+        if sources:
             parts = [p.strip() for p in sources.split(",") if p.strip()]
-            # allow special token 'uploaded' to refer to this request's tmp_source
-            parts = [tmp_source if p == "uploaded" else p for p in parts]
 
-            # If a repo URL was provided and the caller requested 'repo', ingest it and replace token
-            if repo_url and any(p == "repo" or (isinstance(p, str) and p == "repo") for p in parts):
-                try:
-                    from app.schemas.git_schema import GitIngestRequest
-                    from app.services.git_service import GitService
+            for part in parts:
+                if part == "uploaded":
+                    # uploaded significa los archivos enviados en esta misma petición
+                    if files:
+                        add_selected(tmp_source)
+                elif part == "repo":
+                    add_selected(ensure_repo_ingested())
+                elif part == "api":
+                    # No existe una fuente real llamada api en la tabla de chunks.
+                    # Se ignora para evitar búsquedas vacías.
+                    continue
+                else:
+                    # Fuente exacta persistida, por ejemplo:
+                    # uploaded:uuid o blackjack-javascript-main
+                    add_selected(part)
 
-                    ingest_payload = GitIngestRequest(repo_url=repo_url)
-                    ingest_resp = GitService.ingest_repository(ingest_payload, db)
-                    repo_name = ingest_resp.repo_name
-                    parts = [repo_name if p == "repo" else p for p in parts]
-                except Exception:
-                    # if ingest fails, leave parts as-is and continue (repo may not be available)
-                    pass
+        if not selected_sources:
+            if files:
+                add_selected(tmp_source)
 
-            selected_source = parts[0] if len(parts) == 1 else parts
-        else:
-            # if a repo_url is provided without explicit 'sources', ingest and set as source
             if repo_url:
-                try:
-                    from app.schemas.git_schema import GitIngestRequest
-                    from app.services.git_service import GitService
+                add_selected(ensure_repo_ingested())
 
-                    ingest_payload = GitIngestRequest(repo_url=repo_url)
-                    ingest_resp = GitService.ingest_repository(ingest_payload, db)
-                    selected_source = ingest_resp.repo_name
-                except Exception:
-                    selected_source = tmp_source if source is None else source
-            else:
-                selected_source = tmp_source if source is None else source
+            if source:
+                add_selected(source)
+
+        selected_source = None
+        if len(selected_sources) == 1:
+            selected_source = selected_sources[0]
+        elif len(selected_sources) > 1:
+            selected_source = selected_sources
 
         # Enforce hardcoded defaults: final users shouldn't change these params
         forced_top_k = 10
         forced_temperature = 0.2
-        # Force combination of sources (let RAGService decide which uploaded/repo/api to use)
-        forced_source = None
 
         payload = RAGAskRequest(
             query=query,
             top_k=forced_top_k,
             max_new_tokens=max_new_tokens,
             temperature=forced_temperature,
-            source=forced_source,
+            source=selected_source,
             debug=debug,
             conversation_history=history,
         )

@@ -175,10 +175,15 @@ class RAGService:
         citations: list[RAGCitation] = []
 
         for idx, match in enumerate(retrieval.matches, start=1):
-            # allow architecture/diagram uploaded matches even if similarity is low
+            # Si el usuario seleccionó una fuente concreta, confiamos en esa fuente.
+            # Esto evita "No hay evidencia..." cuando el repo/archivo sí fue cargado,
+            # pero el embedding determinístico por hash devuelve baja similitud.
             min_sim = settings.rag_min_similarity
             content_low = (match.content or "").lower()
-            allow_low = False
+
+            allow_low = payload.source is not None
+
+            # También permitimos diagramas aunque la similitud sea baja.
             if isinstance(match.source, str) and match.source.startswith("uploaded:"):
                 if any(t in content_low for t in ["arquitect", "diagrama", "drawio", "diagram"]):
                     allow_low = True
