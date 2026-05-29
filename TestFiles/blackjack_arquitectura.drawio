@@ -1,0 +1,131 @@
+<mxfile host="app.diagrams.net" modified="2026-05-29T00:00:00.000Z" agent="ChatGPT" version="24.7.17" type="device">
+  <diagram id="blackjack-architecture" name="Arquitectura Blackjack">
+    <mxGraphModel dx="1200" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="1654" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+    <mxCell id="title" value="Arquitectura Blackjack JavaScript
+Repositorio: blackjack-javascript-main" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#1D4ED8;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry x="270" y="20" width="360" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="user" value="Usuario / Navegador" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#D97706;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry x="30" y="130" width="160" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="html" value="index.html
+Estructura UI: botones, marcadores y contenedores de cartas" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry x="250" y="120" width="260" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="bootstrap" value="Bootstrap CDN
+Estilos base de botones y layout" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry x="580" y="80" width="210" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="css" value="assets/css/styles.css
+.titulo, .carta, #jugador-cartas, #computadora-cartas" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=#16A34A;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry x="580" y="180" width="260" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="jsmin" value="assets/js/juego-min.js
+Versión minificada cargada por index.html" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE9FE;strokeColor=#7C3AED;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry x="250" y="280" width="260" height="80" as="geometry"/>
+    </mxCell>
+    <mxCell id="js" value="assets/js/juego.js
+Fuente legible de la lógica del juego" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE9FE;strokeColor=#7C3AED;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry x="250" y="400" width="260" height="80" as="geometry"/>
+    </mxCell>
+    <mxCell id="underscore" value="assets/js/underscore-min.js
+Usado por _.shuffle(deck)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry x="30" y="400" width="170" height="80" as="geometry"/>
+    </mxCell>
+    <mxCell id="modulo" value="miModulo (IIFE)
+Encapsula estado: deck y puntosJugadores" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAE8FF;strokeColor=#A21CAF;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry x="570" y="390" width="270" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="iniciar" value="iniciarJuego()
+Crea deck, limpia UI, habilita botones" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#374151;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry x="80" y="540" width="230" height="80" as="geometry"/>
+    </mxCell>
+    <mxCell id="deck" value="crearDeck() + pedirCarta()
+Genera 52 cartas, baraja y extrae con shift()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#374151;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry x="350" y="540" width="250" height="80" as="geometry"/>
+    </mxCell>
+    <mxCell id="score" value="valorCarta() + acumularPuntos()
+Calcula A=11, J/Q/K=10 y actualiza marcadores" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#374151;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry x="640" y="540" width="280" height="80" as="geometry"/>
+    </mxCell>
+    <mxCell id="render" value="crearCarta()
+Renderiza &lt;img class=&quot;carta&quot;&gt; desde assets/cartas/${carta}.png" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#374151;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry x="80" y="680" width="270" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="computer" value="turnoComputadora()
+La computadora pide cartas hasta alcanzar/superar al jugador" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#374151;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry x="390" y="690" width="260" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="winner" value="determinarGanador()
+Evalúa empate, jugador &gt; 21, computadora &gt; 21 o gana computadora" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#374151;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry x="690" y="690" width="280" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="assets" value="assets/cartas/*.png
+Imágenes de cartas: 2-10, A/J/Q/K por palos C/D/H/S" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEDD5;strokeColor=#EA580C;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry x="30" y="820" width="310" height="80" as="geometry"/>
+    </mxCell>
+    <mxCell id="dom" value="DOM IDs
+btnNuevo, btnPedir, btnDetener, jugador-cartas, computadora-cartas" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#DC2626;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry x="400" y="830" width="300" height="80" as="geometry"/>
+    </mxCell>
+    <mxCell id="e1" value="interactúa con" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#374151;fontSize=11;" edge="1" parent="1" source="user" target="html">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e2" value="carga" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#374151;fontSize=11;" edge="1" parent="1" source="html" target="bootstrap">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e3" value="carga" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#374151;fontSize=11;" edge="1" parent="1" source="html" target="css">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e4" value="carga" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#374151;fontSize=11;" edge="1" parent="1" source="html" target="jsmin">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e5" value="equivale a fuente" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#374151;fontSize=11;" edge="1" parent="1" source="jsmin" target="js">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e6" value="carga antes de juego" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#374151;fontSize=11;" edge="1" parent="1" source="html" target="underscore">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e7" value="define" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#374151;fontSize=11;" edge="1" parent="1" source="js" target="modulo">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e8" value="_.shuffle" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#374151;fontSize=11;" edge="1" parent="1" source="underscore" target="deck">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e9" value="expone nuevoJuego" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#374151;fontSize=11;" edge="1" parent="1" source="modulo" target="iniciar">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e10" value="usa deck" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#374151;fontSize=11;" edge="1" parent="1" source="modulo" target="deck">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e11" value="usa puntosJugadores" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#374151;fontSize=11;" edge="1" parent="1" source="modulo" target="score">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e12" value="actualiza UI" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#374151;fontSize=11;" edge="1" parent="1" source="modulo" target="render">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e13" value="turno automático" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#374151;fontSize=11;" edge="1" parent="1" source="modulo" target="computer">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e14" value="al finalizar" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#374151;fontSize=11;" edge="1" parent="1" source="computer" target="winner">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e15" value="carta" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#374151;fontSize=11;" edge="1" parent="1" source="deck" target="score">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e16" value="usa imágenes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#374151;fontSize=11;" edge="1" parent="1" source="render" target="assets">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e17" value="querySelector / eventos click" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#374151;fontSize=11;" edge="1" parent="1" source="modulo" target="dom">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e18" value="existe en" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#374151;fontSize=11;" edge="1" parent="1" source="dom" target="html">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
