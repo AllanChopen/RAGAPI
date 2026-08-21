@@ -71,11 +71,15 @@ class GitIngestRequest(GitSourceRequest):
             raise ValueError("chunk_overlap must be less than chunk_size")
         return self
 
+class GitBranchIngestSummary(BaseModel):
+    name: str
+    commit: str
+    files_processed: int
+    chunks_inserted: int
 
 class GitIngestResponse(BaseModel):
     repo_name: str
     source_type: str
-    current_branch: str
-    latest_commit: GitCommitSummary
+    branches_processed: list[GitBranchIngestSummary]
     files_processed: int
     chunks_inserted: int

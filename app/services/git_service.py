@@ -14,12 +14,14 @@ from sqlalchemy.orm import Session
 
 from app.models.context_chunk import ContextChunk
 from app.schemas.git_schema import (
+    GitBranchIngestSummary,
     GitCommitSummary,
     GitIngestRequest,
     GitIngestResponse,
     GitScanResponse,
     GitSourceRequest,
 )
+
 from app.services.embedding_service import EmbeddingService
 
 
@@ -64,101 +66,209 @@ class GitService:
 
         try:
             repo, repo_root, source_type, repo_name, temp_dir = GitService._prepare_repository(payload)
-
             extensions = GitService._normalize_extensions(payload.include_extensions)
-            files = GitService._collect_files(repo_root, extensions, payload.max_files)
+            branch_refs = GitService._get_branch_refs(repo, payload)
 
-            head_commit = repo.head.commit
-            branch_name = repo.git.rev_parse("--abbrev-ref", "HEAD")
+            if not branch_refs:
+                raise ValueError("No Git branches were found to ingest")
 
             chunks_to_insert: list[ContextChunk] = []
+            branches_processed: list[GitBranchIngestSummary] = []
             files_processed = 0
 
-            for rel_path in files:
-                full_path = repo_root / rel_path
-                file_chunks = GitService._extract_chunks_for_file(
-                    full_path=full_path,
-                    rel_path=rel_path,
-                    chunk_size=payload.chunk_size,
-                    chunk_overlap=payload.chunk_overlap,
-                    max_chunks=payload.max_chunks_per_file,
-                )
-                if not file_chunks:
-                    continue
+            for branch_name, checkout_ref in branch_refs:
+                repo.git.checkout("--force", checkout_ref)
 
-                files_processed += 1
-                for chunk_index, chunk_info in enumerate(file_chunks):
-                    chunk = chunk_info["content"]
-                    embedding = EmbeddingService.embed_text(chunk)
-                    chunks_to_insert.append(
-                        ContextChunk(
-                            source=repo_name,
-                            content=chunk,
-                            metadata_json={
-                                "document_type": chunk_info["document_type"],
-                                "artifact_type": chunk_info["artifact_type"],
-                                "source_type": source_type,
-                                "file_path": rel_path,
-                                "chunk_index": chunk_index,
-                                "line_start": chunk_info["line_start"],
-                                "line_end": chunk_info["line_end"],
-                                "tab": chunk_info.get("tab"),
-                                "page": chunk_info.get("page"),
-                                "branch": branch_name,
-                                "commit": head_commit.hexsha,
-                            },
-                            embedding=embedding,
-                        )
+                head_commit = repo.head.commit
+                files = GitService._collect_files(
+                    repo_root,
+                    extensions,
+                    payload.max_files,
+                )
+
+                branch_files_processed = 0
+                branch_chunks_inserted = 0
+
+                for rel_path in files:
+                    full_path = repo_root / rel_path
+
+                    file_chunks = GitService._extract_chunks_for_file(
+                        full_path=full_path,
+                        rel_path=rel_path,
+                        chunk_size=payload.chunk_size,
+                        chunk_overlap=payload.chunk_overlap,
+                        max_chunks=payload.max_chunks_per_file,
                     )
+
+                    if not file_chunks:
+                        continue
+
+                    branch_files_processed += 1
+
+                    for chunk_index, chunk_info in enumerate(file_chunks):
+                        chunk = chunk_info["content"]
+                        embedding = EmbeddingService.embed_text(chunk)
+
+                        chunks_to_insert.append(
+                            ContextChunk(
+                                source=repo_name,
+                                content=chunk,
+                                metadata_json={
+                                    "document_type": chunk_info["document_type"],
+                                    "artifact_type": chunk_info["artifact_type"],
+                                    "source_type": source_type,
+                                    "file_path": rel_path,
+                                    "chunk_index": chunk_index,
+                                    "line_start": chunk_info["line_start"],
+                                    "line_end": chunk_info["line_end"],
+                                    "tab": chunk_info.get("tab"),
+                                    "page": chunk_info.get("page"),
+                                    "branch": branch_name,
+                                    "commit": head_commit.hexsha,
+                                },
+                                embedding=embedding,
+                            )
+                        )
+
+                        branch_chunks_inserted += 1
+
+                files_processed += branch_files_processed
+
+                branches_processed.append(
+                    GitBranchIngestSummary(
+                        name=branch_name,
+                        commit=head_commit.hexsha,
+                        files_processed=branch_files_processed,
+                        chunks_inserted=branch_chunks_inserted,
+                    )
+                )
+
+            db.query(ContextChunk).filter(
+                ContextChunk.source == repo_name
+            ).delete(synchronize_session=False)
 
             if chunks_to_insert:
                 db.add_all(chunks_to_insert)
-                db.commit()
+
+            db.commit()
 
             return GitIngestResponse(
                 repo_name=repo_name,
                 source_type=source_type,
-                current_branch=branch_name,
-                latest_commit=GitCommitSummary(
-                    hash=head_commit.hexsha,
-                    author=str(head_commit.author),
-                    date=head_commit.committed_datetime.isoformat(),
-                    message=head_commit.message.strip(),
-                ),
+                branches_processed=branches_processed,
                 files_processed=files_processed,
                 chunks_inserted=len(chunks_to_insert),
             )
+
         except (InvalidGitRepositoryError, NoSuchPathError) as exc:
-            raise ValueError("The provided local path is not a valid Git repository") from exc
+            db.rollback()
+            raise ValueError(
+                "The provided local path is not a valid Git repository"
+            ) from exc
+
         except GitCommandError as exc:
-            raise RuntimeError(f"Unable to access Git repository: {exc}") from exc
+            db.rollback()
+            raise RuntimeError(
+                f"Unable to access Git repository: {exc}"
+            ) from exc
+
+        except Exception:
+            db.rollback()
+            raise
+
         finally:
             if temp_dir:
                 shutil.rmtree(temp_dir, ignore_errors=True)
 
     @staticmethod
-    def _prepare_repository(payload: GitSourceRequest) -> tuple[Repo, Path, str, str, str | None]:
+    def _prepare_repository(
+        payload: GitSourceRequest,
+    ) -> tuple[Repo, Path, str, str, str | None]:
         temp_dir: str | None = None
+
         if payload.repo_url:
             temp_dir = tempfile.mkdtemp(prefix="rag_git_")
-            clone_kwargs: dict[str, str | int | bool] = {"depth": 1, "single_branch": True}
+
+            clone_kwargs: dict[str, object] = {
+                "depth": 1,
+            }
+
             if payload.branch:
                 clone_kwargs["branch"] = payload.branch
-            repo = Repo.clone_from(payload.repo_url, temp_dir, **clone_kwargs)
+                clone_kwargs["single_branch"] = True
+            else:
+                clone_kwargs["multi_options"] = [
+                    "--no-single-branch",
+                ]
+
+            repo = Repo.clone_from(
+                payload.repo_url,
+                temp_dir,
+                **clone_kwargs,
+            )
+
             repo_root = Path(temp_dir)
             source_type = "remote"
             repo_name = GitService._repo_name_from_url(payload.repo_url)
-            return repo, repo_root, source_type, repo_name, temp_dir
+
+            return (
+                repo,
+                repo_root,
+                source_type,
+                repo_name,
+                temp_dir,
+            )
 
         local_path = Path(payload.local_path or "")
+
         if not local_path.exists():
-            raise ValueError(f"Local path does not exist: {local_path}")
+            raise ValueError(
+                f"Local path does not exist: {local_path}"
+            )
 
         repo = Repo(local_path)
-        repo_root = Path(repo.working_tree_dir or str(local_path))
+        repo_root = Path(
+            repo.working_tree_dir or str(local_path)
+        )
         source_type = "local"
         repo_name = repo_root.name
-        return repo, repo_root, source_type, repo_name, temp_dir
+
+        return (
+            repo,
+            repo_root,
+            source_type,
+            repo_name,
+            temp_dir,
+        )
+
+    @staticmethod
+    def _get_branch_refs(
+        repo: Repo,
+        payload: GitSourceRequest,
+    ) -> list[tuple[str, str]]:
+        if payload.repo_url:
+            branch_refs = [
+                (ref.remote_head, ref.name)
+                for ref in repo.remotes.origin.refs
+                if ref.remote_head != "HEAD"
+            ]
+        else:
+            branch_refs = [
+                (head.name, head.name)
+                for head in repo.heads
+            ]
+
+        if payload.branch:
+            branch_refs = [
+                item
+                for item in branch_refs
+                if item[0] == payload.branch
+            ]
+
+        return sorted(
+            branch_refs,
+            key=lambda item: item[0].lower(),
+        )
 
     @staticmethod
     def _normalize_extensions(extensions: list[str]) -> set[str]:

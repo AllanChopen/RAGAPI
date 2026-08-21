@@ -26,6 +26,7 @@ class VectorSearchRequest(BaseModel):
     top_k: int = Field(default=5, ge=1, le=50)
     # source can be a single source string, a list of source strings, or None (search all)
     source: str | List[str] | None = None
+    branch: str | List[str] | None = None
 
 
 class VectorSearchResult(BaseModel):

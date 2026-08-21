@@ -11,12 +11,88 @@ from app.models.context_chunk import ContextChunk
 
 
 class RAGService:
+
+    @staticmethod
+    def _normalize_sources(
+        source: str | list[str] | None,
+    ) -> list[str]:
+        if not source:
+            return []
+
+        if isinstance(source, list):
+            return [
+                item
+                for item in source
+                if item
+            ]
+
+        return [
+            item.strip()
+            for item in source.split(",")
+            if item.strip()
+        ]
+
+    @staticmethod
+    def _detect_requested_branches(
+        db: Session,
+        payload: RAGAskRequest,
+    ) -> list[str]:
+        branch_column = ContextChunk.metadata_json["branch"].astext
+
+        query = db.query(
+            branch_column
+        ).filter(
+            branch_column.isnot(None)
+        )
+
+        sources = RAGService._normalize_sources(
+            payload.source
+        )
+
+        if sources:
+            query = query.filter(
+                ContextChunk.source.in_(sources)
+            )
+
+        known_branches = {
+            row[0]
+            for row in query.distinct().all()
+            if row[0]
+        }
+
+        question = payload.query.casefold()
+
+        return sorted(
+            [
+                branch
+                for branch in known_branches
+                if branch.casefold() in question
+                or branch.replace("/", " ").casefold() in question
+            ],
+            key=str.casefold,
+        )
+
     @staticmethod
     def _build_prompt_and_citations(db: Session, payload: RAGAskRequest) -> tuple[str, list[RAGCitation]]:
         # First perform vector search
+        requested_branches = RAGService._detect_requested_branches(
+            db,
+            payload,
+        )
+
+        candidate_top_k = min(
+            payload.top_k * 5,
+            50,
+        )
+
         retrieval = VectorService.semantic_search(
             db,
-            VectorSearchRequest(query=payload.query, top_k=payload.top_k, source=payload.source),
+            VectorSearchRequest(
+                query=payload.query,
+                top_k=candidate_top_k,
+                source=payload.source,
+                branch=requested_branches or None,
+            ),
         )
 
         # If uploaded sources are involved, also do a simple text-based search on uploaded chunks
@@ -102,9 +178,41 @@ class RAGService:
 
             if field_name:
                 try:
-                    code_rows = db.query(ContextChunk).filter(~ContextChunk.source.like('uploaded:%')).filter(
-                        ContextChunk.content.ilike(f"%{field_name}%")
-                    ).limit(payload.top_k).all()
+                    code_query = db.query(
+                        ContextChunk
+                    ).filter(
+                        ~ContextChunk.source.like("uploaded:%"),
+                        ContextChunk.content.ilike(
+                            f"%{field_name}%"
+                        ),
+                    )
+
+                    repo_sources = [
+                        source
+                        for source in RAGService._normalize_sources(
+                            payload.source
+                        )
+                        if not source.startswith("uploaded:")
+                    ]
+
+                    if repo_sources:
+                        code_query = code_query.filter(
+                            ContextChunk.source.in_(
+                                repo_sources
+                            )
+                        )
+
+                    if requested_branches:
+                        code_query = code_query.filter(
+                            ContextChunk.metadata_json["branch"]
+                            .astext.in_(
+                                requested_branches
+                            )
+                        )
+
+                    code_rows = code_query.limit(
+                        payload.top_k
+                    ).all()
                     for row in code_rows:
                         extra_matches.append(
                             type('M', (), {
@@ -135,15 +243,44 @@ class RAGService:
         # Apply hybrid re-ranking: combine embedding similarity with a simple lexical overlap score
         def lexical_score_for(match, query):
             try:
-                qtokens = [t for t in re.findall(r"\w+", (query or "").lower()) if t]
-                if not qtokens:
+                metadata = match.metadata_json or {}
+
+                searchable_text = " ".join(
+                    [
+                        str(match.source or ""),
+                        str(metadata.get("branch") or ""),
+                        str(metadata.get("file_path") or ""),
+                        str(match.content or ""),
+                    ]
+                ).lower()
+
+                qtokens = [
+                    token
+                    for token in re.findall(
+                        r"[\w./-]+",
+                        (query or "").lower(),
+                    )
+                    if token
+                ]
+
+                ctokens = set(
+                    re.findall(
+                        r"[\w./-]+",
+                        searchable_text,
+                    )
+                )
+
+                if not qtokens or not ctokens:
                     return 0.0
-                content = (match.content or "").lower()
-                ctokens = set(re.findall(r"\w+", content))
-                if not ctokens:
-                    return 0.0
-                common = sum(1 for t in set(qtokens) if t in ctokens)
+
+                common = sum(
+                    1
+                    for token in set(qtokens)
+                    if token in ctokens
+                )
+
                 return common / len(set(qtokens))
+
             except Exception:
                 return 0.0
 
@@ -169,7 +306,7 @@ class RAGService:
         for obj in reranked:
             obj.similarity = getattr(obj, 'combined_score', 0.0)
 
-        retrieval.matches = reranked
+        retrieval.matches = reranked[: payload.top_k]
 
         context_blocks: list[str] = []
         citations: list[RAGCitation] = []
@@ -196,6 +333,9 @@ class RAGService:
             line_start = metadata.get("line_start")
             line_end = metadata.get("line_end")
             tab = metadata.get("tab")
+            branch = metadata.get("branch")
+            commit = metadata.get("commit")
+
             location = file_path or "unknown"
             if line_start and line_end:
                 location = f"{location}:{line_start}-{line_end}"
@@ -207,6 +347,8 @@ class RAGService:
                     [
                         f"[Chunk {idx}]",
                         f"source: {match.source}",
+                        f"branch: {branch or 'not-applicable'}",
+                        f"commit: {commit or 'not-applicable'}",
                         f"location: {location}",
                         f"similarity: {match.similarity:.4f}",
                         f"content:\n{match.content}",
@@ -222,6 +364,8 @@ class RAGService:
                     line_start=int(line_start) if line_start is not None else None,
                     line_end=int(line_end) if line_end is not None else None,
                     tab=str(tab) if tab is not None else None,
+                    branch=str(branch) if branch is not None else None,
+                    commit=str(commit) if commit is not None else None,
                 )
             )
 
@@ -231,6 +375,10 @@ class RAGService:
         prompt = (
             "You are a strict technical assistant for repository traceability. "
             "You MUST use only the provided retrieved context and citations. "
+            "Git chunks may come from different branches. "
+            "Treat each branch as an independent code snapshot. "
+            "Never merge implementations from different branches as if they were the same version. "
+            "When evidence comes from multiple branches, state clearly which branch each fact belongs to. "
             "Do not use external or prior model knowledge. "
             "If evidence is insufficient, answer exactly: 'No hay evidencia suficiente en los documentos cargados.'\n\n"
             f"Conversation memory:\n{history_text}\n\n"
@@ -258,6 +406,8 @@ class RAGService:
                     "line_start": c.line_start,
                     "line_end": c.line_end,
                     "tab": c.tab,
+                    "branch": c.branch,
+                    "commit": c.commit,
                 }
                 for c in citations
             ]
@@ -317,5 +467,15 @@ class RAGService:
                 location = f"{location}:{citation.line_start}-{citation.line_end}"
             if citation.tab:
                 location = f"{location} [tab: {citation.tab}]"
+
+            if citation.branch:
+                location = f"[rama: {citation.branch}] {location}"
+
+            if citation.commit:
+                location = (
+                    f"{location} "
+                    f"(commit {citation.commit[:8]})"
+                )
+
             lines.append(f"- {location}")
         return "\n".join(lines).strip()

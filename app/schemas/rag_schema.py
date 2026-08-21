@@ -22,6 +22,8 @@ class RAGCitation(BaseModel):
     line_start: int | None = None
     line_end: int | None = None
     tab: str | None = None
+    branch: str | None = None
+    commit: str | None = None
 
 
 class RAGAskResponse(BaseModel):

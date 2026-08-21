@@ -201,7 +201,10 @@ function formatAnswer(answer) {
 }
 
 function citationLocation(citation) {
-  let location = citation.file_path || citation.source || "Fuente sin archivo";
+  let location =
+    citation.file_path ||
+    citation.source ||
+    "Fuente sin archivo";
 
   if (citation.line_start && citation.line_end) {
     location += `:${citation.line_start}-${citation.line_end}`;
@@ -209,6 +212,14 @@ function citationLocation(citation) {
 
   if (citation.tab) {
     location += ` [tab: ${citation.tab}]`;
+  }
+
+  if (citation.branch) {
+    location = `[rama: ${citation.branch}] ${location}`;
+  }
+
+  if (citation.commit) {
+    location += ` · commit ${citation.commit.slice(0, 8)}`;
   }
 
   return location;

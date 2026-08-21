@@ -73,6 +73,17 @@ class VectorService:
             ContextChunk.embedding.cosine_distance(query_embedding).label("distance"),
         )
 
+        if payload.branch:
+            branches = (
+                payload.branch
+                if isinstance(payload.branch, list)
+                else [payload.branch]
+            )
+
+            stmt = stmt.filter(
+                ContextChunk.metadata_json["branch"].astext.in_(branches)
+            )
+
         # payload.source may be None, a single string, or a list of strings
         rows = []
         if payload.source:
