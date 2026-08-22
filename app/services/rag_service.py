@@ -380,6 +380,7 @@ class RAGService:
             "Never merge implementations from different branches as if they were the same version. "
             "When evidence comes from multiple branches, state clearly which branch each fact belongs to. "
             "Do not use external or prior model knowledge. "
+            "You should also be able to provide suggestions for refactoring, improvements, or optimizations based on the retrieved context when asked."
             "If evidence is insufficient, answer exactly: 'No hay evidencia suficiente en los documentos cargados.'\n\n"
             f"Conversation memory:\n{history_text}\n\n"
             f"User question:\n{payload.query}\n\n"
