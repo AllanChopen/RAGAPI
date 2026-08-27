@@ -1,5 +1,4 @@
 from pydantic import BaseModel, Field
-from typing import List
 
 
 class VectorHealthResponse(BaseModel):
@@ -8,25 +7,14 @@ class VectorHealthResponse(BaseModel):
     embedding_dimensions: int
 
 
-class VectorUpsertRequest(BaseModel):
-    source: str
-    content: str
-    embedding: list[float]
-    metadata_json: dict = Field(default_factory=dict)
-
-
-class VectorUpsertResponse(BaseModel):
-    id: int
-    source: str
-    embedding_dimensions: int
-
-
 class VectorSearchRequest(BaseModel):
     query: str
-    top_k: int = Field(default=5, ge=1, le=50)
-    # source can be a single source string, a list of source strings, or None (search all)
-    source: str | List[str] | None = None
-    branch: str | List[str] | None = None
+    top_k: int = Field(default=5, ge=1, le=100)
+    project_id: str = Field(min_length=1, max_length=120)
+    source: str | list[str] | None = None
+    branches: list[str] | None = None
+    source_types: list[str] | None = None
+    file_paths: list[str] | None = None
 
 
 class VectorSearchResult(BaseModel):

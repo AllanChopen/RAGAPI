@@ -12,7 +12,7 @@ def index():
     if not index_file.exists():
         from fastapi import HTTPException
 
-        raise HTTPException(status_code=404, detail="Frontend index not found")
+        raise HTTPException(status_code=404, detail="No se encontró el archivo principal del frontend")
     return FileResponse(index_file)
 
 @router.get('/frontend/{path:path}', include_in_schema=False)
@@ -20,4 +20,4 @@ def asset(path: str):
     file = FRONTEND_DIR.joinpath(path)
     if file.exists():
         return FileResponse(file)
-    raise HTTPException(status_code=404, detail="Asset not found")
+    raise HTTPException(status_code=404, detail="No se encontró el recurso solicitado")

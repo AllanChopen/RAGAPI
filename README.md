@@ -1,409 +1,213 @@
-## Manual de instalación y ejecución local
+# RAG API para proyectos de software
 
-Este proyecto es una API RAG desarrollada con **FastAPI**, orientada a centralizar conocimiento técnico desde repositorios de código, documentos, diagramas Draw.io, archivos Excel, Markdown, PDF y otros artefactos técnicos.
-La aplicación incluye una interfaz web tipo chat para cargar fuentes de información y realizar preguntas usando recuperación aumentada por generación.
+API FastAPI orientada exclusivamente a la capa RAG del proyecto final: ingesta, chunking, embeddings, almacenamiento vectorial, recuperación, generación con LLM, trazabilidad de fuentes y comparación de ramas Git.
 
----
+## Responsabilidad de esta API
 
-## 1. Requisitos previos
+El backend general es responsable de usuarios, autenticación, registro de proyectos, permisos y lógica de negocio. Esta API recibe un `project_id` externo y lo utiliza únicamente para aislar el conocimiento indexado.
 
-Antes de ejecutar el proyecto, asegúrate de tener instalado:
+Flujo principal:
 
-* Python 3.10 o superior.
-* Git.
-* PostgreSQL con extensión `pgvector`, o una base de datos Supabase PostgreSQL.
-* Una API Key de Hugging Face.
-* Navegador web actualizado.
+1. El backend registra/selecciona un proyecto.
+2. Consulta las ramas de un repositorio.
+3. Indexa las ramas requeridas.
+4. Indexa documentación y scripts SQL.
+5. Formula preguntas indicando `project_id` y opcionalmente ramas.
+6. El RAG recupera chunks semánticamente relevantes.
+7. El LLM responde usando exclusivamente el contexto recuperado.
+8. La API devuelve respuesta y fuentes estructuradas.
 
-También se recomienda usar un entorno virtual de Python para evitar conflictos con dependencias globales.
+## API pública v1
 
----
+Swagger: `http://127.0.0.1:8000/docs`
 
-## 2. Clonar o descargar el proyecto
+| Método | Endpoint | Uso |
+|---|---|---|
+| POST | `/api/v1/repositories/branches` | Obtener ramas remotas y rama por defecto |
+| POST | `/api/v1/repositories/ingest` | Indexar una o varias ramas |
+| POST | `/api/v1/documents/ingest` | Indexar documentos, diccionarios y SQL |
+| POST | `/api/v1/query` | Consultar un proyecto mediante RAG |
+| POST | `/api/v1/compare` | Comparar dos ramas con Git diff + RAG |
+| DELETE | `/api/v1/projects/{project_id}/index` | Eliminar el contexto vectorial de un proyecto |
+| GET | `/api/v1/health` | Estado del RAG, DB, pgvector y proveedores |
+| GET | `/api/v1/metrics` | Cantidad de consultas, errores y tiempo promedio |
 
-Clona el repositorio o descarga el código fuente en tu equipo.
+Los endpoints de prueba y boilerplate de versiones anteriores fueron retirados para mantener un contrato RAG único y claro. El contrato para el equipo backend está documentado en `API_CONTRACT.md`, la cobertura de la propuesta en `COMPLIANCE.md` y el flujo de validación en `TESTING.md`.
 
-```bash
-git clone https://github.com/AllanChopen/RAGAPI
-cd RAGAPI
-```
+## Proveedores de IA
 
-Si el proyecto fue entregado como archivo `.zip`, descomprímelo y entra a la carpeta raíz del proyecto:
+La generación está desacoplada del RAG mediante `LLMService`.
 
-```bash
-cd RAGAPI
-```
+`LLM_PROVIDER` acepta:
 
-La raíz del proyecto debe contener archivos como:
+- `huggingface`
+- `openai`
+- `anthropic`
+- `openai_compatible`
 
-```text
-RAGAPI.py
-requirements.txt
-.env.example
-app/
-frontend/
-TestFiles/
-README.md
-```
+El proveedor de embeddings es independiente mediante `EMBEDDING_PROVIDER`. Por ejemplo, puedes usar Claude para generación y conservar Hugging Face u OpenAI para embeddings sin modificar el flujo RAG.
 
----
+`EMBEDDING_PROVIDER` acepta:
 
-## 3. Crear entorno virtual
+- `huggingface` (por defecto)
+- `openai`
 
-En Windows:
+El modelo de embeddings por defecto es `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`. Sus vectores semánticos de 384 dimensiones se completan con ceros hasta `EMBEDDING_DIMENSIONS=1536`, conservando la similitud coseno y evitando una migración destructiva de la tabla pgvector existente.
 
-```bash
-python -m venv venv
-venv\Scripts\activate
-```
+## Configuración
 
-En macOS o Linux:
+Copia `.env.example` a `.env` y configura las credenciales necesarias.
 
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-Cuando el entorno virtual esté activo, deberías ver algo parecido a esto en la terminal:
-
-```text
-(venv)
-```
-
----
-
-## 4. Instalar dependencias
-
-Instala las dependencias del proyecto usando:
-
-```bash
-pip install -r requirements.txt
-```
-
-El archivo `requirements.txt` incluye las librerías necesarias para:
-
-* FastAPI.
-* Uvicorn.
-* SQLAlchemy.
-* PostgreSQL.
-* pgvector.
-* Procesamiento de Excel.
-* Procesamiento de PDF.
-* Lectura de XML / Draw.io.
-* Clonación de repositorios Git.
-* Integración con Hugging Face.
-
----
-
-## 5. Configurar variables de entorno
-
-Copia el archivo `.env.example` y crea un archivo `.env` en la raíz del proyecto.
-
-En Windows:
-
-```bash
-copy .env.example .env
-```
-
-En macOS o Linux:
-
-```bash
-cp .env.example .env
-```
-
-Luego abre el archivo `.env` y configura tus valores reales.
-
-Ejemplo:
+Configuración actual por defecto:
 
 ```env
-APP_NAME=RAG API
-API_PREFIX=/api
-
-DATABASE_URL=postgresql://USUARIO:CONTRASENA@HOST:PUERTO/postgres
-
-HF_API_TOKEN=hf_tu_token_de_huggingface
-HF_MODEL_URL=https://router.huggingface.co/v1/chat/completions
+LLM_PROVIDER=huggingface
+LLM_MAX_OUTPUT_TOKENS=1600
+HF_API_TOKEN=...
 HF_MODEL_NAME=Qwen/Qwen2.5-Coder-32B-Instruct
 
+EMBEDDING_PROVIDER=huggingface
+EMBEDDING_MODEL_NAME=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 EMBEDDING_DIMENSIONS=1536
 ```
 
----
+Para OpenAI:
 
-## 6. Configurar base de datos PostgreSQL / Supabase
-
-El proyecto utiliza una tabla llamada `context_chunks` para guardar fragmentos de información, metadatos y embeddings.
-
-Se recomienda usar PostgreSQL con la extensión `pgvector`.
-
-Si usas Supabase:
-
-1. Crea un proyecto en Supabase.
-2. Copia la cadena de conexión PostgreSQL.
-3. Colócala en la variable `DATABASE_URL` del archivo `.env`.
-4. Verifica que la extensión `vector` esté disponible.
-
-El proyecto intenta crear la extensión automáticamente al iniciar:
-
-```sql
-CREATE EXTENSION IF NOT EXISTS vector;
+```env
+LLM_PROVIDER=openai
+OPENAI_API_KEY=...
+OPENAI_MODEL_NAME=...
 ```
 
-Si tu usuario de base de datos no tiene permisos para crear extensiones, habilita `vector` manualmente desde Supabase o desde tu administrador de base de datos.
+Para Anthropic:
 
----
+```env
+LLM_PROVIDER=anthropic
+ANTHROPIC_API_KEY=...
+ANTHROPIC_MODEL_NAME=...
+```
 
-## 7. Ejecutar el servidor
+Para otro proveedor compatible con Chat Completions de OpenAI:
 
-Desde la raíz del proyecto, ejecuta:
+```env
+LLM_PROVIDER=openai_compatible
+OPENAI_COMPATIBLE_BASE_URL=https://proveedor.example/v1
+OPENAI_COMPATIBLE_API_KEY=...
+OPENAI_COMPATIBLE_MODEL_NAME=...
+```
+
+## Requisitos previos
+
+- Python 3.11 o superior.
+- Git instalado en el servidor.
+- PostgreSQL con la extensión `pgvector` disponible.
+- Acceso al proveedor de embeddings y al proveedor generativo configurados.
+
+## Instalación
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Windows PowerShell:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+## Ejecutar
 
 ```bash
 uvicorn RAGAPI:app --reload
 ```
 
-Si todo está correcto, deberías ver una salida similar a:
-
-```text
-Uvicorn running on http://127.0.0.1:8000
-```
-
----
-
-## 8. Abrir la interfaz web
-
-Abre el navegador y entra a:
-
-```text
-http://127.0.0.1:8000/
-```
-
-Desde esta interfaz puedes:
-
-* Ingresar un enlace de repositorio Git.
-* Cargar archivos como Excel, Draw.io, PDF, Markdown, CSV, JSON o XML.
-* Ingestar las fuentes cargadas.
-* Realizar preguntas en formato chat.
-* Ver fuentes utilizadas por la respuesta.
-* Consultar trazabilidad entre documentación, código y diccionarios de datos.
-
----
-
-## 9. Abrir Swagger UI
-
-La documentación interactiva de la API está disponible en:
+Swagger:
 
 ```text
 http://127.0.0.1:8000/docs
 ```
 
-Desde Swagger puedes probar endpoints como:
-
-* `POST /api/rag/ingest`
-* `POST /api/rag/ask/upload`
-* `POST /api/rag/ask`
-* `POST /api/git/ingest`
-* `POST /api/vector/search`
-* `POST /api/trace/dictionary/ingest`
-* `POST /api/trace/field-usage`
-
----
-
-## 10. Flujo recomendado de uso desde la interfaz
-
-### Paso 1: cargar conocimiento
-
-Primero debes proporcionar información al sistema. Puedes usar una o varias fuentes:
-
-* URL de un repositorio GitHub o GitLab.
-* Archivo `.drawio` o `.xml` con arquitectura.
-* Archivo `.xlsx` con diccionario de datos.
-* Documentación `.md` o `.pdf`.
-* Archivos `.csv`, `.json`, `.yaml`, `.yml`, `Dockerfile`, entre otros.
-
-### Paso 2: ingestar fuentes
-
-Después de seleccionar las fuentes, presiona el botón para ingestar información.
-El sistema procesará los documentos y guardará fragmentos consultables en la base vectorial.
-
-### Paso 3: hacer preguntas
-
-Cuando existan fuentes cargadas, puedes realizar preguntas como:
-
-```text
-¿Qué hace este repositorio?
-```
-
-```text
-Explícame la arquitectura del sistema.
-```
-
-```text
-¿En qué archivos se usa el campo customer_id definido en el diccionario de datos?
-```
-
-```text
-¿Qué impacto tendría cambiar esta función?
-```
-
----
-
-## 11. Archivos de prueba incluidos
-
-El proyecto incluye una carpeta llamada:
-
-```text
-TestFiles/
-```
-
-Dentro de esta carpeta pueden existir archivos de prueba como:
-
-```text
-diccionario_datos.xlsx
-diccionario_datos_APIBanca.xlsx
-arquitectura_rag.drawio
-arquitectura_APIBanca.drawio
-```
-
-Estos archivos sirven para validar la ingesta de:
-
-* Diccionarios de datos en Excel.
-* Diagramas de arquitectura en Draw.io.
-* Relaciones entre documentación técnica y código fuente.
-
----
-
-## 12. Ejemplo de prueba rápida
-
-Ejecuta el servidor:
-
-```bash
-uvicorn RAGAPI:app --reload
-```
-
-Abre:
+Frontend interno de pruebas:
 
 ```text
 http://127.0.0.1:8000/
 ```
 
-Carga una fuente, por ejemplo:
+El frontend utiliza los endpoints v1 con el `project_id` de prueba `frontend-demo`.
 
-* Un repositorio Git.
-* Un archivo Excel desde `TestFiles/`.
-* Un archivo Draw.io desde `TestFiles/`.
+## Ejemplos
 
-Luego pregunta:
+### Listar ramas
+
+```json
+POST /api/v1/repositories/branches
+{
+  "repository_url": "https://github.com/dashed/git-chain"
+}
+```
+
+### Indexar repositorio
+
+```json
+POST /api/v1/repositories/ingest
+{
+  "project_id": "proyecto-1",
+  "repository_url": "https://github.com/dashed/git-chain",
+  "branches": ["master", "fix-merge-commit-info"]
+}
+```
+
+Si `branches` es `null` u omitido se indexan todas las ramas remotas encontradas.
+
+### Consultar
+
+```json
+POST /api/v1/query
+{
+  "project_id": "proyecto-1",
+  "question": "¿Dónde se implementa el manejo de merge commits?",
+  "branches": ["fix-merge-commit-info"]
+}
+```
+
+### Comparar ramas
+
+```json
+POST /api/v1/compare
+{
+  "project_id": "proyecto-1",
+  "repository_url": "https://github.com/dashed/git-chain",
+  "branch_a": "master",
+  "branch_b": "fix-merge-commit-info",
+  "question": "¿Qué cambió en el manejo de merge commits?"
+}
+```
+
+`/compare` obtiene el listado real de archivos modificados con Git y utiliza RAG para explicar el contenido de los cambios. Ambas ramas deben haberse indexado previamente.
+
+## Tipos de contenido
+
+La ingesta reconoce código fuente, Markdown, PDF, JSON, CSV, XLSX, Draw.io/XML, YAML, Dockerfiles y scripts `.sql`. Los chunks almacenan metadata de trazabilidad como:
+
+- `project_id`
+- `source_type`
+- `repository` o `document`
+- `branch`
+- `commit`
+- `file_path`
+- líneas o página/hoja cuando aplica
+- `artifact_type`
+
+## Reindexación
+
+Los chunks antiguos generados con el embedding determinístico previo no deben mezclarse con el nuevo índice semántico. Los endpoints v1 están aislados por `project_id`, y cada reingesta reemplaza el contenido del mismo repositorio o documento dentro de ese proyecto.
+
+Para eliminar por completo el índice de un proyecto:
 
 ```text
-¿Qué información contienen las fuentes cargadas?
-```
-
-Otra pregunta recomendada:
-
-```text
-Explícame la arquitectura del sistema según el diagrama cargado.
-```
-
-Y para validar trazabilidad:
-
-```text
-¿En qué archivos de código se usa el campo definido en el diccionario de datos?
-```
-
----
-
-## 13. Reiniciar la sesión de carga
-
-La interfaz incluye una opción para reiniciar la sesión actual.
-Esto permite limpiar fuentes temporales cargadas y comenzar una nueva prueba sin mezclar contexto anterior.
-
-También puedes usar el endpoint:
-
-```text
-POST /api/rag/reset_session
-```
-
----
-
-## 14. Consideraciones importantes
-
-* El modelo responde priorizando únicamente las fuentes cargadas.
-* Si no existe evidencia suficiente en los documentos cargados, el sistema debe responder:
-
-```text
-No hay evidencia suficiente en los documentos cargados.
-```
-
-* Las respuestas deben incluir fuentes o referencias cuando exista información recuperada.
-* Para mejores resultados, carga documentos relacionados entre sí, por ejemplo:
-
-  * Repositorio de código.
-  * Diagrama de arquitectura.
-  * Diccionario de datos.
-  * Documentación técnica.
-
----
-
-## 15. Problemas comunes
-
-### Error de conexión a base de datos
-
-Verifica que `DATABASE_URL` esté correctamente configurado en `.env`.
-
-También confirma que la base de datos esté activa y acepte conexiones externas.
-
----
-
-### Error relacionado con `vector`
-
-Si aparece un error relacionado con `vector`, `pgvector` o la extensión `vector`, habilita la extensión en PostgreSQL:
-
-```sql
-CREATE EXTENSION IF NOT EXISTS vector;
-```
-
----
-
-### Error de Hugging Face
-
-Si el modelo no responde, revisa:
-
-* Que `HF_API_TOKEN` sea válido.
-* Que `HF_MODEL_URL` esté configurado.
-* Que `HF_MODEL_NAME` exista y esté disponible.
-* Que tengas conexión a internet.
-
----
-
-### La IA responde que no hay evidencia suficiente
-
-Esto puede ocurrir cuando:
-
-* No se han cargado fuentes.
-* La pregunta no está relacionada con los documentos cargados.
-* El documento cargado no contiene información suficiente.
-* La fuente no fue correctamente ingestada.
-
-Para corregirlo, carga al menos una fuente válida y vuelve a realizar la pregunta.
-
----
-
-## 16. Comando principal de ejecución
-
-El comando principal recomendado para levantar el proyecto en local es:
-
-```bash
-uvicorn RAGAPI:app --reload
-```
-
-URL principal:
-
-```text
-http://127.0.0.1:8000/
-```
-
-Swagger UI:
-
-```text
-http://127.0.0.1:8000/docs
+DELETE /api/v1/projects/{project_id}/index
 ```

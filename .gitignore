@@ -4,3 +4,4 @@ __pycache__/
 .env
 .vscode/
 artifact_repo_test/
+.DS_Store

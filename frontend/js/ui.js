@@ -210,6 +210,10 @@ function citationLocation(citation) {
     location += `:${citation.line_start}-${citation.line_end}`;
   }
 
+  if (citation.page) {
+    location += ` [página: ${citation.page}]`;
+  }
+
   if (citation.tab) {
     location += ` [tab: ${citation.tab}]`;
   }
@@ -231,9 +235,9 @@ function renderCitations(citations) {
   }
 
   const items = citations
-    .map((citation) => {
-      const similarity = Number(citation.similarity || 0).toFixed(3);
-      return `<li>${escapeHtml(citationLocation(citation))} · similitud ${escapeHtml(similarity)}</li>`;
+    .map((citation, index) => {
+      const score = Number(citation.score ?? citation.similarity ?? 0).toFixed(3);
+      return `<li><strong>[S${index + 1}]</strong> ${escapeHtml(citationLocation(citation))} · puntaje ${escapeHtml(score)}</li>`;
     })
     .join("");
 
@@ -299,9 +303,11 @@ export function renderDebug(response, enabled) {
   dom.debugContent.textContent = JSON.stringify(
     {
       answer: response?.answer,
-      citations: response?.citations,
+      sources: response?.sources || response?.citations,
       context_chunks_used: response?.context_chunks_used,
-      retrieval_query: response?.retrieval_query,
+      provider: response?.provider,
+      model: response?.model,
+      response_time_ms: response?.response_time_ms,
       debug_matches: response?.debug_matches,
     },
     null,

@@ -1,4 +1,4 @@
 from app.models.context_chunk import ContextChunk
-from app.models.item import Item
+from app.models.rag_query_log import RAGQueryLog
 
-__all__ = ["Item", "ContextChunk"]
+__all__ = ["ContextChunk", "RAGQueryLog"]
