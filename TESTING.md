@@ -57,6 +57,27 @@ curl -X POST http://127.0.0.1:8000/api/v1/repositories/ingest \
 
 Esperado: ambas ramas aparecen en `branches`, cada una con `commit`, `files_processed` y `chunks_created`.
 
+### Listar e indexar un commit histórico
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/repositories/commits \
+  -H "Content-Type: application/json" \
+  -d '{"repository_url":"https://github.com/dashed/git-chain","branch":"master","limit":5}'
+```
+
+Toma el SHA completo de un commit de la respuesta e indexa ese SHA para `rag-test`:
+
+```json
+POST /api/v1/repositories/commits/ingest
+{
+  "project_id": "rag-test",
+  "repository_url": "https://github.com/dashed/git-chain",
+  "commits": ["SHA_OBTENIDO_EN_EL_PASO_ANTERIOR"]
+}
+```
+
+Comprueba que `GET /api/v1/projects/rag-test/sources` lo incluya en `repositories[].commits`. Consulta `POST /api/v1/query` con `project_id`, `question` y ese `commit`; las fuentes deben tener el mismo SHA y repositorio, sin documentos ni otros commits. Para preguntas sobre cambios, deben aparecer fuentes `commit_metadata` o `commit_diff`. Un SHA no indexado debe devolver `409`.
+
 ## 5. Preguntar qué ramas se indexaron
 
 ```bash
@@ -123,7 +144,25 @@ files = TestFiles/rag_schema_test.sql
 
 También puedes cargar `TestFiles/blackjack_arquitectura.drawio` y `TestFiles/blackjack_diccionario_datos_rag.xlsx` para validar arquitectura y diccionario de datos.
 
+Para validar Word, carga un archivo `.docx` con párrafos y una tabla. La respuesta de ingesta debe indicar `artifact_type: "documentation"` y un número de chunks mayor que cero; después, el archivo debe aparecer en `GET /api/v1/projects/rag-test/sources` y poder seleccionarse con `"document":"nombre.docx"` en `/api/v1/query`.
+
 ## 9. Preguntas de base de datos
+
+Antes de consultar, verifica el inventario:
+
+```bash
+curl http://127.0.0.1:8000/api/v1/projects/rag-test/sources
+```
+
+La respuesta debe listar las ramas indexadas y `rag_schema_test.sql` en `documents`, con cantidades de chunks. Para restringir la pregunta a ese documento:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{"project_id":"rag-test","question":"¿Qué tablas define el script?","document":"rag_schema_test.sql"}'
+```
+
+Verifica que todas las entradas de `sources` tengan `source_type: "document"` y `document: "rag_schema_test.sql"`. Un nombre de documento ausente debe devolver `409` y combinar `document` con `branches` debe devolver `422`.
 
 Ejecuta en `/api/v1/query`:
 

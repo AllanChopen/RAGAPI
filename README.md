@@ -25,7 +25,10 @@ Swagger: `http://127.0.0.1:8000/docs`
 |---|---|---|
 | POST | `/api/v1/repositories/branches` | Obtener ramas remotas y rama por defecto |
 | POST | `/api/v1/repositories/ingest` | Indexar una o varias ramas |
+| POST | `/api/v1/repositories/commits` | Listar commits recientes de una rama |
+| POST | `/api/v1/repositories/commits/ingest` | Indexar commits específicos sin borrar ramas |
 | POST | `/api/v1/documents/ingest` | Indexar documentos, diccionarios y SQL |
+| GET | `/api/v1/projects/{project_id}/sources` | Listar repositorios, ramas, commits y documentos indexados |
 | POST | `/api/v1/query` | Consultar un proyecto mediante RAG |
 | POST | `/api/v1/compare` | Comparar dos ramas con Git diff + RAG |
 | DELETE | `/api/v1/projects/{project_id}/index` | Eliminar el contexto vectorial de un proyecto |
@@ -163,6 +166,32 @@ POST /api/v1/repositories/ingest
 
 Si `branches` es `null` u omitido se indexan todas las ramas remotas encontradas.
 
+### Consultar e indexar commits
+
+Lista los commits recientes de una rama (si se omite `branch`, usa la predeterminada):
+
+```json
+POST /api/v1/repositories/commits
+{
+  "repository_url": "https://github.com/dashed/git-chain",
+  "branch": "master",
+  "limit": 20
+}
+```
+
+Para consultar un commit histórico mediante RAG, primero indexa su SHA. Esta operación agrega el contenido del commit, su mensaje y fragmentos del diff respecto a su primer padre; conserva las ramas y los demás commits del proyecto:
+
+```json
+POST /api/v1/repositories/commits/ingest
+{
+  "project_id": "proyecto-1",
+  "repository_url": "https://github.com/dashed/git-chain",
+  "commits": ["abcdef1234567890"]
+}
+```
+
+La ingesta de commits históricos descarga el historial completo del repositorio. Se aceptan hasta 10 SHA por solicitud. Los diffs se limitan con `RAG_COMMIT_MAX_DIFF_FILES`, `RAG_COMMIT_MAX_DIFF_CHUNKS_PER_FILE` y `RAG_COMMIT_MAX_PATCH_CHARS`.
+
 ### Consultar
 
 ```json
@@ -173,6 +202,33 @@ POST /api/v1/query
   "branches": ["fix-merge-commit-info"]
 }
 ```
+
+Para preguntar únicamente sobre un documento, consulta primero `GET /api/v1/projects/proyecto-1/sources` y usa el nombre exacto devuelto en `documents`:
+
+```json
+POST /api/v1/query
+{
+  "project_id": "proyecto-1",
+  "question": "¿Qué tablas describe este archivo?",
+  "document": "esquema.sql"
+}
+```
+
+Al omitir `document`, `branches` y `commit`, la búsqueda considera las ramas y documentos del proyecto. Los snapshots históricos explícitos se consultan indicando `commit`. `document` no se combina con `branches`.
+
+Para consultar una versión concreta, envía el SHA completo o un prefijo único de al menos 7 caracteres:
+
+```json
+POST /api/v1/query
+{
+  "project_id": "proyecto-1",
+  "question": "¿Qué cambió en este commit?",
+  "commit": "abcdef1234567890",
+  "repository": "git-chain"
+}
+```
+
+`repository` es opcional si el SHA identifica un único repositorio del proyecto. `commit` no se combina con `branches` ni `document`. Los commits punta ya indexados por rama pueden consultarse por SHA; para disponer también del mensaje y el diff, indexa el commit con `/repositories/commits/ingest`. Las consultas sin filtro de commit no mezclan los snapshots históricos indexados con las ramas actuales.
 
 ### Comparar ramas
 
@@ -191,7 +247,7 @@ POST /api/v1/compare
 
 ## Tipos de contenido
 
-La ingesta reconoce código fuente, Markdown, PDF, JSON, CSV, XLSX, Draw.io/XML, YAML, Dockerfiles y scripts `.sql`. Los chunks almacenan metadata de trazabilidad como:
+La ingesta reconoce código fuente, Markdown, PDF, Word `.docx`, JSON, CSV, XLSX, Draw.io/XML, YAML, Dockerfiles y scripts `.sql`. En `.docx` se extraen párrafos y tablas del cuerpo del documento; no se infieren números de página ni de línea. Los chunks almacenan metadata de trazabilidad como:
 
 - `project_id`
 - `source_type`
@@ -204,7 +260,7 @@ La ingesta reconoce código fuente, Markdown, PDF, JSON, CSV, XLSX, Draw.io/XML,
 
 ## Reindexación
 
-Los chunks antiguos generados con el embedding determinístico previo no deben mezclarse con el nuevo índice semántico. Los endpoints v1 están aislados por `project_id`, y cada reingesta reemplaza el contenido del mismo repositorio o documento dentro de ese proyecto.
+Los chunks antiguos generados con el embedding determinístico previo no deben mezclarse con el nuevo índice semántico. Los endpoints v1 están aislados por `project_id`. Reindexar ramas reemplaza las ramas de ese repositorio; reindexar un commit reemplaza solo ese commit; reindexar un documento reemplaza ese documento.
 
 Para eliminar por completo el índice de un proyecto:
 

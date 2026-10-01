@@ -6,6 +6,10 @@ from app.core.database import get_db
 from app.schemas.repository_schema import (
     RepositoryBranchesRequest,
     RepositoryBranchesResponse,
+    RepositoryCommitsRequest,
+    RepositoryCommitsResponse,
+    RepositoryCommitIngestRequest,
+    RepositoryCommitIngestResponse,
     RepositoryIngestRequest,
     RepositoryIngestResponse,
 )
@@ -13,6 +17,44 @@ from app.services.repository_service import RepositoryService
 
 
 router = APIRouter(prefix="/repositories", tags=["Repositorios"])
+
+
+@router.post(
+    "/commits",
+    response_model=RepositoryCommitsResponse,
+    summary="Listar commits recientes de una rama",
+    description="Consulta los commits recientes de la rama indicada o de la rama predeterminada.",
+)
+def list_repository_commits(payload: RepositoryCommitsRequest) -> RepositoryCommitsResponse:
+    try:
+        return RepositoryService.list_commits(payload.repository_url, payload.branch, payload.limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+
+
+@router.post(
+    "/commits/ingest",
+    response_model=RepositoryCommitIngestResponse,
+    summary="Indexar commits específicos",
+    description="Indexa el contenido y los cambios de los commits indicados sin borrar las ramas u otros commits ya indexados.",
+)
+def ingest_repository_commits(
+    payload: RepositoryCommitIngestRequest,
+    db: Session = Depends(get_db),
+) -> RepositoryCommitIngestResponse:
+    try:
+        return RepositoryService.ingest_commits(payload, db)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="La base de datos no está disponible mientras se indexan los commits.",
+        ) from exc
 
 
 @router.post(

@@ -24,7 +24,7 @@ BinaryUploadFile = Annotated[
     description=(
         "Carga uno o varios archivos asociados a un proyecto, extrae su contenido, "
         "lo divide en fragmentos, genera embeddings y almacena el resultado en el índice vectorial. "
-        "Admite documentación, scripts SQL, hojas de cálculo y otros formatos soportados por el RAG."
+        "Admite PDF, Word .docx, scripts SQL, hojas de cálculo y otros formatos soportados por el RAG."
     ),
     response_description="Resumen de los documentos indexados y cantidad de fragmentos creados.",
 )

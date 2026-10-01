@@ -25,6 +25,23 @@ class RAGQueryRequest(BaseModel):
         default=None,
         description="Ramas Git a las que se debe restringir la recuperación. Si se omite, se consulta todo el proyecto indexado.",
     )
+    document: str | None = Field(
+        default=None,
+        min_length=1,
+        description="Nombre exacto de un documento indexado en el proyecto. Si se omite, se consultan todas las fuentes. No se combina con branches.",
+    )
+    commit: str | None = Field(
+        default=None,
+        min_length=7,
+        max_length=40,
+        pattern=r"^[0-9a-fA-F]+$",
+        description="SHA completo o prefijo único de un commit indexado. No se combina con branches ni document.",
+    )
+    repository: str | None = Field(
+        default=None,
+        min_length=1,
+        description="Nombre del repositorio para desambiguar un commit cuando el proyecto contiene varios repositorios.",
+    )
     conversation_history: list[ConversationTurn] = Field(
         default_factory=list,
         description=(
@@ -45,6 +62,22 @@ class RAGQueryRequest(BaseModel):
             )
             if not self.branches:
                 self.branches = None
+        if self.document is not None:
+            self.document = self.document.strip()
+            if not self.document:
+                raise ValueError("document no puede estar vacío")
+        if self.document and self.branches:
+            raise ValueError("document y branches no pueden utilizarse juntos")
+        if self.commit is not None:
+            self.commit = self.commit.lower()
+        if self.commit and (self.document or self.branches):
+            raise ValueError("commit no puede combinarse con document ni branches")
+        if self.repository is not None:
+            self.repository = self.repository.strip()
+            if not self.repository:
+                raise ValueError("repository no puede estar vacío")
+            if not self.commit:
+                raise ValueError("repository requiere commit")
         return self
 
 
@@ -150,3 +183,35 @@ class RAGMetricsResponse(BaseModel):
 class RAGIndexDeleteResponse(BaseModel):
     project_id: str
     deleted_chunks: int
+
+
+class RAGIndexedBranch(BaseModel):
+    name: str
+    commit: str | None = None
+    chunks: int
+
+
+class RAGIndexedCommit(BaseModel):
+    sha: str
+    message: str | None = None
+    chunks: int
+
+
+class RAGIndexedRepository(BaseModel):
+    name: str
+    chunks: int
+    branches: list[RAGIndexedBranch]
+    commits: list[RAGIndexedCommit] = Field(default_factory=list)
+
+
+class RAGIndexedDocument(BaseModel):
+    name: str
+    artifact_type: str | None = None
+    chunks: int
+
+
+class RAGProjectSourcesResponse(BaseModel):
+    project_id: str
+    repositories: list[RAGIndexedRepository]
+    documents: list[RAGIndexedDocument]
+    total_chunks: int

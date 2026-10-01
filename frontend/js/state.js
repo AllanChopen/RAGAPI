@@ -5,6 +5,9 @@ export const state = {
   history: [],
   loading: false,
   lastResponse: null,
+  selectedDocument: null,
+  selectedCommit: null,
+  selectedRepository: null,
 };
 
 export function loadState() {
@@ -16,6 +19,9 @@ export function loadState() {
     state.sources = Array.isArray(parsed.sources) ? parsed.sources : [];
     state.history = Array.isArray(parsed.history) ? parsed.history : [];
     state.lastResponse = parsed.lastResponse || null;
+    state.selectedDocument = parsed.selectedDocument || null;
+    state.selectedCommit = parsed.selectedCommit || null;
+    state.selectedRepository = parsed.selectedRepository || null;
   } catch (_error) {
     clearState();
   }
@@ -26,6 +32,9 @@ export function saveState() {
     sources: state.sources,
     history: state.history.slice(-10),
     lastResponse: state.lastResponse,
+    selectedDocument: state.selectedDocument,
+    selectedCommit: state.selectedCommit,
+    selectedRepository: state.selectedRepository,
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
@@ -35,6 +44,9 @@ export function clearState() {
   state.history = [];
   state.loading = false;
   state.lastResponse = null;
+  state.selectedDocument = null;
+  state.selectedCommit = null;
+  state.selectedRepository = null;
   localStorage.removeItem(STORAGE_KEY);
 }
 

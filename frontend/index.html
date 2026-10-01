@@ -49,15 +49,27 @@
             </label>
 
             <label class="field">
+              <span>SHA de commits (opcional)</span>
+              <input
+                id="commitShas"
+                name="commitShas"
+                type="text"
+                placeholder="SHA1, SHA2"
+                autocomplete="off"
+              />
+              <small>Con una URL de repositorio, indexa esos commits en lugar de todas las ramas. Sepáralos con comas.</small>
+            </label>
+
+            <label class="field">
               <span>Archivos técnicos</span>
               <input
                 id="filesInput"
                 name="filesInput"
                 type="file"
                 multiple
-                accept=".xlsx,.csv,.json,.drawio,.xml,.md,.pdf,.txt,.py,.js,.ts,.tsx,.jsx,.java,.cs,.go,.rs,.php,.rb,.yaml,.yml,.mmd,.mermaid,Dockerfile"
+                accept=".xlsx,.csv,.json,.drawio,.xml,.md,.pdf,.docx,.txt,.py,.js,.ts,.tsx,.jsx,.java,.cs,.go,.rs,.php,.rb,.yaml,.yml,.mmd,.mermaid,Dockerfile"
               />
-              <small>Soporta Excel, Draw.io/XML, Markdown, PDF, JSON, CSV, código e infraestructura.</small>
+              <small>Soporta Excel, Draw.io/XML, Markdown, PDF, Word (.docx), JSON, CSV, código e infraestructura.</small>
             </label>
 
             <button id="ingestButton" type="submit" class="btn btn-primary">
@@ -95,6 +107,22 @@
               </div>
             </div>
           </div>
+
+          <label class="field scope-field" for="sourceScope">
+            <span>Consultar</span>
+            <select id="sourceScope">
+              <option value="">Todo el proyecto</option>
+            </select>
+            <small>Selecciona un documento para responder solo con su contenido.</small>
+          </label>
+
+          <label class="field scope-field" for="commitScope">
+            <span>Commit indexado</span>
+            <select id="commitScope">
+              <option value="">Sin filtro de commit</option>
+            </select>
+            <small>Selecciona un commit para consultar solo esa versión y sus cambios.</small>
+          </label>
 
           <div id="chatMessages" class="chat-messages" aria-live="polite">
             <div id="emptyState" class="empty-state">

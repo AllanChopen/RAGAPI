@@ -18,20 +18,27 @@ async function readJsonResponse(response) {
   return payload;
 }
 
-export async function ingestSources({ repoUrl, files }) {
+export async function ingestSources({ repoUrl, files, commits = [] }) {
   let repository = null;
   let documents = null;
+  let commitIndex = null;
 
   if (repoUrl) {
-    const response = await fetch(`${API_BASE}/repositories/ingest`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        project_id: DEMO_PROJECT_ID,
-        repository_url: repoUrl,
-      }),
-    });
-    repository = await readJsonResponse(response);
+    const response = await fetch(
+      `${API_BASE}/repositories/${commits.length ? "commits/ingest" : "ingest"}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_id: DEMO_PROJECT_ID,
+          repository_url: repoUrl,
+          ...(commits.length ? { commits } : {}),
+        }),
+      }
+    );
+    const result = await readJsonResponse(response);
+    if (commits.length) commitIndex = result;
+    else repository = result;
   }
 
   if (Array.isArray(files) && files.length > 0) {
@@ -46,16 +53,23 @@ export async function ingestSources({ repoUrl, files }) {
     documents = await readJsonResponse(response);
   }
 
-  return { repository, documents };
+  return { repository, documents, commitIndex };
 }
 
-export async function askQuestion({ query, history, debug }) {
+export async function listProjectSources() {
+  const response = await fetch(`${API_BASE}/projects/${encodeURIComponent(DEMO_PROJECT_ID)}/sources`);
+  return readJsonResponse(response);
+}
+
+export async function askQuestion({ query, history, debug, document, commit, repository }) {
   const response = await fetch(`${API_BASE}/query`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       project_id: DEMO_PROJECT_ID,
       question: query,
+      ...(document ? { document } : {}),
+      ...(commit ? { commit, repository } : {}),
       conversation_history: history || [],
       debug: Boolean(debug),
     }),

@@ -7,6 +7,9 @@ class RAGAskRequest(BaseModel):
     query: str
     project_id: str = Field(min_length=1, max_length=120)
     branches: list[str] | None = None
+    document: str | None = None
+    commit: str | None = None
+    repository: str | None = None
     source: str | list[str] | None = None
     file_paths: list[str] | None = None
     top_k: int = Field(default=8, ge=1, le=20)

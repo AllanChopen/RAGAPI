@@ -25,7 +25,7 @@ router = APIRouter(tags=["RAG"])
     "/query",
     response_model=RAGQueryResponse,
     summary="Consultar el RAG sobre un proyecto",
-    description="Recupera fragmentos relevantes del proyecto indexado y genera una respuesta fundamentada en esas fuentes. Puede restringirse a una o varias ramas Git.",
+    description="Recupera fragmentos relevantes del proyecto y genera una respuesta fundamentada. Puede restringirse a ramas Git, un documento o un commit indexado.",
     response_description="Respuesta generada por el RAG junto con sus fuentes estructuradas.",
 )
 def query_rag(
@@ -33,13 +33,19 @@ def query_rag(
     db: Session = Depends(get_db),
 ) -> RAGQueryResponse:
     try:
-        _ensure_query_context(db, payload.project_id, payload.branches)
+        _ensure_query_context(db, payload.project_id, payload.branches, payload.document)
+        resolved_commit, resolved_repository = _resolve_commit_context(
+            db, payload.project_id, payload.commit, payload.repository
+        )
         response = RAGService.ask(
             db,
             RAGAskRequest(
                 project_id=payload.project_id,
                 query=payload.question,
                 branches=payload.branches,
+                document=payload.document,
+                commit=resolved_commit,
+                repository=resolved_repository,
                 top_k=settings.rag_default_top_k,
                 max_new_tokens=settings.llm_max_output_tokens,
                 conversation_history=payload.conversation_history,
@@ -196,17 +202,39 @@ def _ensure_query_context(
     db: Session,
     project_id: str,
     branches: list[str] | None,
+    document: str | None = None,
 ) -> None:
-    query = db.query(ContextChunk.metadata_json["branch"].astext).filter(
-        ContextChunk.metadata_json["project_id"].astext == project_id
-    )
-    rows = query.distinct().all()
-    if not rows:
+    project_filter = ContextChunk.metadata_json["project_id"].astext == project_id
+    if db.query(ContextChunk.id).filter(project_filter).first() is None:
         raise LookupError(
             f"El proyecto '{project_id}' no tiene contexto RAG indexado. Primero indexe un repositorio o documentos."
         )
 
+    if document:
+        indexed_document = (
+            db.query(ContextChunk.id)
+            .filter(
+                project_filter,
+                ContextChunk.metadata_json["source_type"].astext == "document",
+                ContextChunk.metadata_json["document"].astext == document,
+            )
+            .first()
+        )
+        if indexed_document is None:
+            raise LookupError(
+                f"El documento '{document}' no está indexado para el proyecto '{project_id}'."
+            )
+
     if branches:
+        rows = (
+            db.query(ContextChunk.metadata_json["branch"].astext)
+            .filter(
+                project_filter,
+                ContextChunk.metadata_json["source_type"].astext == "repository",
+            )
+            .distinct()
+            .all()
+        )
         indexed_branches = {row[0] for row in rows if row[0]}
         missing = [branch for branch in branches if branch not in indexed_branches]
         if missing:
@@ -214,6 +242,39 @@ def _ensure_query_context(
                 "Las siguientes ramas no están indexadas para este proyecto: "
                 + ", ".join(missing)
             )
+
+
+def _resolve_commit_context(
+    db: Session,
+    project_id: str,
+    commit_prefix: str | None,
+    repository: str | None,
+) -> tuple[str | None, str | None]:
+    if not commit_prefix:
+        return None, None
+
+    metadata = ContextChunk.metadata_json
+    query = db.query(metadata["repository"].astext, metadata["commit"].astext).filter(
+        metadata["project_id"].astext == project_id,
+        metadata["source_type"].astext.in_(
+            ["repository", "repository_commit", "commit_metadata"]
+        ),
+        metadata["commit"].astext.like(f"{commit_prefix}%"),
+    )
+    if repository:
+        query = query.filter(metadata["repository"].astext == repository)
+    matches = {(name, sha) for name, sha in query.distinct().all() if name and sha}
+    if not matches:
+        raise LookupError(
+            f"El commit '{commit_prefix}' no está indexado para el proyecto '{project_id}'."
+        )
+    if len(matches) > 1:
+        raise LookupError(
+            "El SHA indicado coincide con varios commits o repositorios indexados; "
+            "envíe el SHA completo y, si aplica, repository."
+        )
+    name, sha = matches.pop()
+    return sha, name
 
 
 def _ensure_indexed_branches(

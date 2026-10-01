@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     rag_chunk_overlap: int = 150
     rag_repository_max_files: int = 500
     rag_repository_max_chunks_per_file: int = 50
+    rag_commit_max_diff_files: int = 50
+    rag_commit_max_diff_chunks_per_file: int = 5
+    rag_commit_max_patch_chars: int = 20000
     rag_document_max_chunks_per_file: int = 300
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")

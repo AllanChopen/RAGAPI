@@ -7,6 +7,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from git import Repo
+from docx import Document
+from docx.table import Table
 from openpyxl import load_workbook
 from pypdf import PdfReader
 
@@ -35,6 +37,7 @@ class GitService:
         ".yml",
         ".xml",
         ".pdf",
+        ".docx",
         ".xlsx",
         ".sql",
         ".toml",
@@ -66,14 +69,19 @@ class GitService:
     }
 
     @staticmethod
-    def prepare_remote_repository(repository_url: str) -> tuple[Repo, Path, str, str]:
+    def prepare_remote_repository(
+        repository_url: str,
+        depth: int | None = 1,
+    ) -> tuple[Repo, Path, str, str]:
         temp_dir = tempfile.mkdtemp(prefix="rag_git_")
         try:
+            clone_options = {"multi_options": ["--no-single-branch"]}
+            if depth is not None:
+                clone_options["depth"] = depth
             repo = Repo.clone_from(
                 repository_url,
                 temp_dir,
-                depth=1,
-                multi_options=["--no-single-branch"],
+                **clone_options,
             )
         except Exception:
             shutil.rmtree(temp_dir, ignore_errors=True)
@@ -163,6 +171,10 @@ class GitService:
             return GitService._extract_pdf_chunks(
                 full_path, chunk_size, chunk_overlap, max_chunks
             )
+        if suffix == ".docx":
+            return GitService._extract_docx_chunks(
+                full_path, chunk_size, chunk_overlap, max_chunks
+            )
         if suffix == ".drawio" or (suffix == ".xml" and "drawio" in rel_path.lower()):
             return GitService._extract_drawio_chunks(
                 full_path, chunk_size, chunk_overlap, max_chunks
@@ -239,7 +251,7 @@ class GitService:
             if file_name == "package.json":
                 return "dependencies"
             return "documentation"
-        if suffix in {".md", ".txt", ".pdf"}:
+        if suffix in {".md", ".txt", ".pdf", ".docx"}:
             return "documentation"
         if suffix in {".py", ".js", ".ts", ".tsx", ".jsx", ".java", ".cs", ".go", ".rs", ".php", ".rb"}:
             return "code"
@@ -378,6 +390,41 @@ class GitService:
                 chunk["page"] = page_index
                 chunks.append(chunk)
 
+        return chunks
+
+    @staticmethod
+    def _extract_docx_chunks(
+        full_path: Path,
+        chunk_size: int,
+        chunk_overlap: int,
+        max_chunks: int,
+    ) -> list[dict[str, int | str | None]]:
+        try:
+            document = Document(str(full_path))
+            lines: list[str] = []
+            for block in document.iter_inner_content():
+                if isinstance(block, Table):
+                    for row in block.rows:
+                        cells = [" ".join(cell.text.split()) for cell in row.cells]
+                        if any(cells):
+                            lines.append(" | ".join(cells))
+                else:
+                    text = " ".join(block.text.split())
+                    if text:
+                        lines.append(text)
+        except Exception:
+            return []
+
+        chunks = GitService._split_text_with_lines(
+            "\n".join(lines), chunk_size, chunk_overlap, max_chunks
+        )
+        for chunk in chunks:
+            chunk["line_start"] = None
+            chunk["line_end"] = None
+            chunk["document_type"] = "artifact"
+            chunk["artifact_type"] = "documentation"
+            chunk["tab"] = None
+            chunk["page"] = None
         return chunks
 
     @staticmethod

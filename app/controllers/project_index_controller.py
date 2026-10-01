@@ -4,10 +4,30 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.context_chunk import ContextChunk
-from app.schemas.api_rag_schema import RAGIndexDeleteResponse
+from app.schemas.api_rag_schema import RAGIndexDeleteResponse, RAGProjectSourcesResponse
+from app.services.project_index_service import ProjectIndexService
 
 
 router = APIRouter(prefix="/projects", tags=["Índice de proyectos"])
+
+
+@router.get(
+    "/{project_id}/sources",
+    response_model=RAGProjectSourcesResponse,
+    summary="Listar repositorios, ramas y documentos indexados de un proyecto",
+    description="Devuelve las fuentes disponibles para seleccionar el alcance de una consulta RAG. Un proyecto sin índice devuelve listas vacías.",
+)
+def list_project_sources(
+    project_id: str,
+    db: Session = Depends(get_db),
+) -> RAGProjectSourcesResponse:
+    try:
+        return ProjectIndexService.list_sources(db, project_id)
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="La base de datos no está disponible mientras se consultan las fuentes del proyecto.",
+        ) from exc
 
 
 @router.delete(

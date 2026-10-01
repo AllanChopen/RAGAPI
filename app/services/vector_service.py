@@ -52,12 +52,36 @@ class VectorService:
             ContextChunk.metadata_json["project_id"].astext == payload.project_id
         )
 
+        if payload.commit:
+            stmt = stmt.filter(
+                ContextChunk.metadata_json["source_type"].astext.in_(
+                    ["repository", "repository_commit", "commit_metadata", "commit_diff"]
+                ),
+                ContextChunk.metadata_json["commit"].astext == payload.commit,
+            )
+            if payload.repository:
+                stmt = stmt.filter(
+                    ContextChunk.metadata_json["repository"].astext == payload.repository
+                )
+        else:
+            stmt = stmt.filter(
+                ContextChunk.metadata_json["source_type"].astext.notin_(
+                    ["repository_commit", "commit_metadata", "commit_diff"]
+                )
+            )
+
         if payload.branches:
             stmt = stmt.filter(
                 or_(
                     ContextChunk.metadata_json["source_type"].astext != "repository",
                     ContextChunk.metadata_json["branch"].astext.in_(payload.branches),
                 )
+            )
+
+        if payload.document:
+            stmt = stmt.filter(
+                ContextChunk.metadata_json["source_type"].astext == "document",
+                ContextChunk.metadata_json["document"].astext == payload.document,
             )
 
         if payload.source_types:

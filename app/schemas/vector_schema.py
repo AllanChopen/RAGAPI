@@ -13,6 +13,9 @@ class VectorSearchRequest(BaseModel):
     project_id: str = Field(min_length=1, max_length=120)
     source: str | list[str] | None = None
     branches: list[str] | None = None
+    document: str | None = None
+    commit: str | None = None
+    repository: str | None = None
     source_types: list[str] | None = None
     file_paths: list[str] | None = None
 

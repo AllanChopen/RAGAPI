@@ -22,7 +22,8 @@ La API RAG administra exclusivamente:
 - chunking;
 - embeddings;
 - almacenamiento y recuperación vectorial;
-- filtrado por proyecto y ramas;
+- filtrado por proyecto, ramas y documento;
+- listado, ingesta y filtrado de commits Git;
 - construcción del prompt;
 - llamada al proveedor de IA;
 - trazabilidad de fuentes;
@@ -34,9 +35,11 @@ La API RAG administra exclusivamente:
 1. `POST /repositories/branches`
 2. `POST /repositories/ingest`
 3. `POST /documents/ingest` cuando existan documentos o SQL
-4. `POST /query`
-5. `POST /compare` cuando se necesite comparar ramas
-6. `GET /metrics` para observabilidad del RAG
+4. `POST /repositories/commits` y `POST /repositories/commits/ingest` cuando se necesite consultar versiones históricas
+5. `GET /projects/{project_id}/sources` para conocer las opciones disponibles
+6. `POST /query`
+7. `POST /compare` cuando se necesite comparar ramas
+8. `GET /metrics` para observabilidad del RAG
 
 ## 1. Listar ramas
 
@@ -108,7 +111,29 @@ Respuesta:
 
 `total_chunks` incluye un chunk técnico de metadata del repositorio que registra las ramas remotas detectadas, sus commits punta y cuáles fueron indexadas.
 
-Una nueva ingesta del mismo `project_id + repositorio` reemplaza el índice anterior de ese repositorio.
+Una nueva ingesta de ramas del mismo `project_id + repositorio` reemplaza sus ramas y el manifiesto, pero conserva los commits indexados explícitamente.
+
+### Listar e indexar commits
+
+`POST /repositories/commits` recibe `repository_url`, `branch` opcional y `limit` (1 a 100, por defecto 20). Devuelve `repository`, `branch` y `commits` con `sha`, `message` y `authored_at`.
+
+```json
+{
+  "repository_url": "https://github.com/organizacion/proyecto",
+  "branch": "main",
+  "limit": 20
+}
+```
+
+`POST /repositories/commits/ingest` recibe `project_id`, `repository_url` y `commits` (entre 1 y 10 SHA completos o prefijos únicos de 7 a 40 caracteres). Devuelve el SHA completo, mensaje, archivos procesados y chunks creados por cada commit. Indexa el snapshot de código, el mensaje, la lista de archivos modificados y fragmentos del diff frente al primer padre. Un commit raíz se compara con un árbol vacío. Reindexar un commit reemplaza solo sus chunks; conserva ramas, otros commits y documentos. Para buscar commits antiguos se descarga el historial completo del repositorio.
+
+```json
+{
+  "project_id": "123",
+  "repository_url": "https://github.com/organizacion/proyecto",
+  "commits": ["abcdef1234567890"]
+}
+```
 
 ## 3. Indexar documentos y SQL
 
@@ -121,6 +146,7 @@ Campos:
 ```text
 project_id = 123
 files = requerimientos.pdf
+files = especificacion.docx
 files = esquema.sql
 files = diccionario.xlsx
 ```
@@ -142,8 +168,39 @@ Respuesta:
 ```
 
 Una nueva ingesta de un documento con el mismo nombre dentro del mismo `project_id` reemplaza sus chunks anteriores.
+Los archivos Word `.docx` se procesan como documentación: se extrae el texto de los párrafos y tablas del cuerpo. El formato antiguo `.doc` no está incluido.
 
-## 4. Consultar el RAG
+## 4. Listar fuentes indexadas del proyecto
+
+### `GET /projects/{project_id}/sources`
+
+Devuelve los repositorios, ramas con contenido, commits indexados explícitamente y documentos del proyecto. Un proyecto sin índice devuelve listas vacías y `total_chunks: 0`.
+
+```json
+{
+  "project_id": "123",
+  "repositories": [
+    {
+      "name": "proyecto",
+      "chunks": 263,
+      "branches": [
+        { "name": "main", "commit": "abc123...", "chunks": 250 }
+      ],
+      "commits": [
+        { "sha": "def456...", "message": "Agregar módulo", "chunks": 12 }
+      ]
+    }
+  ],
+  "documents": [
+    { "name": "esquema.sql", "artifact_type": "database", "chunks": 8 }
+  ],
+  "total_chunks": 271
+}
+```
+
+`chunks` del repositorio incluye su chunk técnico de metadata y los commits indexados. Usa `documents[].name` como valor exacto del campo `document`, o `repositories[].commits[].sha` para `commit`. El nombre del documento distingue mayúsculas y minúsculas.
+
+## 5. Consultar el RAG
 
 ### `POST /query`
 
@@ -165,6 +222,31 @@ Solicitud restringida a ramas:
   "branches": ["develop"]
 }
 ```
+
+Solicitud restringida a un documento:
+
+```json
+{
+  "project_id": "123",
+  "question": "¿Qué tablas define el esquema?",
+  "document": "esquema.sql"
+}
+```
+
+Si se omiten `document`, `branches` y `commit`, se consultan las ramas actuales y los documentos del proyecto; los snapshots históricos explícitos se excluyen para no mezclar versiones. Con `document`, solo se recuperan chunks de ese documento: no se consultan repositorios ni otros documentos. `document` y `branches` son filtros alternativos; enviarlos juntos devuelve `422`. Un documento no indexado para ese proyecto devuelve `409`.
+
+Solicitud restringida a un commit:
+
+```json
+{
+  "project_id": "123",
+  "question": "¿Qué cambió en este commit?",
+  "commit": "def4567",
+  "repository": "proyecto"
+}
+```
+
+`commit` acepta SHA completo o prefijo único de 7 a 40 caracteres y se resuelve al SHA completo indexado. `repository` es opcional y desambigua proyectos con varios repositorios. `commit` no se combina con `branches` ni `document` (`422`). Un SHA ausente o ambiguo devuelve `409`. La recuperación se limita al repositorio y SHA resueltos; se excluyen documentos y otras versiones. Sin filtro de commit, las consultas habituales excluyen los snapshots históricos para evitar mezclar versiones. Un commit punta ya indexado por rama puede consultarse por SHA, aunque el mensaje y el diff requieren la ingesta explícita del commit.
 
 Respuesta:
 
@@ -201,7 +283,7 @@ Respuesta:
 
 El consumidor debe utilizar `sources` como evidencia estructurada. Los identificadores `[S1]`, `[S2]`, etc. usados dentro de `answer` corresponden al orden del arreglo `sources`.
 
-## 5. Comparar ramas
+## 6. Comparar ramas
 
 ### `POST /compare`
 
@@ -247,7 +329,7 @@ Respuesta:
 
 `changes` proviene del Git diff real entre ambas referencias. La recuperación del RAG se restringe a los archivos reportados por ese diff y a las dos ramas solicitadas.
 
-## 6. Estado
+## 7. Estado
 
 ### `GET /health`
 
@@ -258,7 +340,7 @@ Valida:
 - configuración del proveedor de embeddings;
 - configuración del proveedor generativo.
 
-## 7. Métricas
+## 8. Métricas
 
 ### `GET /metrics`
 
@@ -273,7 +355,7 @@ Respuesta:
 }
 ```
 
-## 8. Eliminar índice de un proyecto
+## 9. Eliminar índice de un proyecto
 
 ### `DELETE /projects/{project_id}/index`
 
@@ -283,8 +365,9 @@ Elimina únicamente los chunks vectoriales de ese `project_id`. No elimina el pr
 
 | HTTP | Significado |
 |---|---|
-| `400` | Solicitud inválida, rama desconocida o archivo no soportado |
-| `409` | El proyecto o las ramas requeridas todavía no están indexados |
+| `400` | Solicitud inválida o archivo no soportado |
+| `409` | El proyecto, documento, commit o las ramas requeridas todavía no están indexados; SHA ambiguo |
+| `422` | Filtros incompatibles o solicitud que no cumple el esquema |
 | `502` | Error accediendo a Git, embeddings o proveedor de IA |
 | `503` | Base de datos / almacenamiento RAG no disponible |
 

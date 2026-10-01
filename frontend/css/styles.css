@@ -33,7 +33,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -213,6 +214,7 @@ h3 {
 }
 
 .field input,
+.field select,
 .chat-composer input {
   width: 100%;
   border: 1px solid var(--border);
@@ -225,6 +227,7 @@ h3 {
 }
 
 .field input:focus,
+.field select:focus,
 .chat-composer input:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
@@ -233,6 +236,10 @@ h3 {
 .field input[type="file"] {
   padding: 10px;
   background: var(--bg-soft);
+}
+
+.scope-field {
+  margin-bottom: 16px;
 }
 
 .btn {
@@ -364,7 +371,7 @@ h3 {
 
 .chat-panel {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
 }
 
 .chat-messages {

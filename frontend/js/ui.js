@@ -1,5 +1,8 @@
 export const dom = {
   ingestForm: document.getElementById("ingestForm"),
+  sourceScope: document.getElementById("sourceScope"),
+  commitScope: document.getElementById("commitScope"),
+  commitShas: document.getElementById("commitShas"),
   repoUrl: document.getElementById("repoUrl"),
   filesInput: document.getElementById("filesInput"),
   ingestButton: document.getElementById("ingestButton"),
@@ -128,8 +131,41 @@ function renderMarkdown(value) {
 
 export function setLoading(isLoading) {
   dom.ingestButton.disabled = isLoading;
+  dom.sourceScope.disabled = isLoading;
+  dom.commitScope.disabled = isLoading;
   dom.sendButton.disabled = isLoading || dom.messageInput.disabled;
   dom.resetButton.disabled = isLoading;
+}
+
+export function renderDocumentOptions(sources, selectedDocument, isLoading) {
+  const documents = sources.filter((source) => source.type === "uploaded");
+  dom.sourceScope.replaceChildren(new Option("Todo el proyecto", ""));
+  documents.forEach((document) => {
+    dom.sourceScope.add(new Option(document.label, document.value));
+  });
+  dom.sourceScope.value = documents.some((item) => item.value === selectedDocument)
+    ? selectedDocument
+    : "";
+  dom.sourceScope.disabled = isLoading || documents.length === 0;
+}
+
+export function renderCommitOptions(sources, selectedCommit, selectedRepository, isLoading) {
+  const options = sources
+    .filter((source) => source.type === "repo")
+    .flatMap((source) => (source.commits || []).map((commit) => ({
+      repository: source.value,
+      ...commit,
+    })));
+  dom.commitScope.replaceChildren(new Option("Sin filtro de commit", ""));
+  options.forEach((commit) => {
+    const label = `${commit.repository} · ${commit.sha.slice(0, 10)} · ${commit.message || "Sin mensaje"}`;
+    dom.commitScope.add(new Option(label, JSON.stringify([commit.repository, commit.sha])));
+  });
+  const selected = selectedCommit ? JSON.stringify([selectedRepository, selectedCommit]) : "";
+  dom.commitScope.value = options.some(
+    (commit) => commit.sha === selectedCommit && commit.repository === selectedRepository
+  ) ? selected : "";
+  dom.commitScope.disabled = isLoading || options.length === 0;
 }
 
 export function setNotice(type, message) {
@@ -315,10 +351,15 @@ export function renderDebug(response, enabled) {
   );
 }
 
-export function renderAll({ sources, history, isLoading, lastResponse, debugEnabled }) {
+export function renderAll({
+  sources, history, isLoading, lastResponse, debugEnabled,
+  selectedDocument, selectedCommit, selectedRepository,
+}) {
   const ready = sources.length > 0;
   renderSourceSummary(sources);
   renderSourceList(sources);
+  renderDocumentOptions(sources, selectedDocument, isLoading);
+  renderCommitOptions(sources, selectedCommit, selectedRepository, isLoading);
   renderChatAvailability(ready, isLoading);
   renderChat(history);
   renderDebug(lastResponse, debugEnabled);
